@@ -1,0 +1,234 @@
+{
+ "schema": "demo-content-pack/1",
+ "id": "cedar-in-privilege-lab",
+ "title": "Cedar in Privilege",
+ "version": "1.0.0",
+ "demo": {
+  "id": "cedar-in-privilege-lab",
+  "name": "Cedar in Privilege",
+  "catalog": "D135",
+  "baseUrl": "http://127.0.0.1:7820",
+  "doctor": "/api/health",
+  "tags": [
+   "pingone-privilege",
+   "pingfederate",
+   "agent-identity",
+   "authorization-policy",
+   "simulated"
+  ]
+ },
+ "glossary": [
+  {
+   "id": "cedar-ai-policy",
+   "term": "Cedar AI policy",
+   "definition": "Cedar is the policy language Privilege uses for its AI policies. A policy forbids an action on a tool, for example refuse the call or hold it for a human. It is a rule engine inside the gateway that decides each call, and not authentication (console text). It is believed to narrow only and never to grant access (UNVERIFIED, not tested here). The three cases in this lab are simulated; only the act.sub case has a result measured on a real tenant (2026-11-16, one real agent).",
+   "aliases": [
+    "AI policy",
+    "Cedar"
+   ]
+  },
+  {
+   "id": "hold-unattended",
+   "term": "Hold for a human (mcp:InvokeUnattended)",
+   "definition": "A forbid on the action mcp:InvokeUnattended with an unless approval_count >= 1 clause holds the call until a person approves it; the retry then goes through. Console text from the full demo app notes, not re-run here; the hold is simulated in this lab.",
+   "aliases": [
+    "HITL",
+    "hold"
+   ]
+  },
+  {
+   "id": "token-scope",
+   "term": "Token-scope gate",
+   "definition": "A forbid unless context.token.scopes.contains(\"<scope>\") refuses a token that lacks the scope and allows one that has it. Console text, simulated here. For a PingFederate token, whether its scope reaches the policy was not tested (UNVERIFIED).",
+   "aliases": [
+    "scope policy"
+   ]
+  },
+  {
+   "id": "act-sub",
+   "term": "act.sub (actor)",
+   "definition": "The sub inside the RFC 8693 act claim: which agent is acting. For the Cedar rule the act claim is an OBJECT such as {\"sub\": \"agent-client-example\"} (that is what the real run used). If act were emitted as text it is believed to leave the rule with no sub (UNVERIFIED).",
+   "aliases": [
+    "act claim",
+    "actor"
+   ]
+  },
+  {
+   "id": "active-candidate",
+   "term": "Active vs Candidate",
+   "definition": "Per the Privilege console documentation (not re-run in this lab, UNVERIFIED) a Candidate policy is stored and checked but not enforced, and only an Active policy is enforced. Start every new policy as a Candidate.",
+   "aliases": [
+    "policy state"
+   ]
+  },
+  {
+   "id": "required-claims",
+   "term": "Required claims",
+   "definition": "Claims the gateway demands on the presented token, checked at sign-in on the identity or grant. Believed to do the same job as an act.sub policy, earlier (UNVERIFIED: not tested in this lab).",
+   "aliases": [
+    "RequiredClaims"
+   ]
+  },
+  {
+   "id": "mock-door",
+   "term": "Mock door",
+   "definition": "This lab in-process stand-in for the Privilege gateway. It evaluates three rule shapes (hold, scope, act.sub), each compared exactly. It is not a Cedar engine and it decides nothing real.",
+   "aliases": [
+    "simulated gateway"
+   ]
+  }
+ ],
+ "sources": [
+  {
+   "id": "rfc8693",
+   "title": "RFC 8693: OAuth 2.0 Token Exchange",
+   "url": "https://www.rfc-editor.org/rfc/rfc8693",
+   "kind": "standard",
+   "use": "Defines the act (actor) claim whose sub the act.sub policy reads.",
+   "status": "not-read",
+   "checked": "2026-11-16"
+  },
+  {
+   "id": "cedar-docs",
+   "title": "Cedar policy language",
+   "url": "https://docs.cedarpolicy.com/",
+   "kind": "vendor-docs",
+   "use": "The policy language behind the AI policies; the lab uses three rule shapes only.",
+   "status": "not-read",
+   "checked": "2026-11-16"
+  }
+ ],
+ "cards": [
+  {
+   "id": "try-hold",
+   "label": "Case 1: hold for a human",
+   "description": "Run the unattended call with no approval: it is held, not refused, with an approval id. Then approve it and retry. Simulated; the shape is console text from the full demo app notes, not re-run here.",
+   "group": "try-it",
+   "action": {
+    "type": "route",
+    "href": "/#flow"
+   },
+   "terms": [
+    "cedar-ai-policy",
+    "hold-unattended"
+   ],
+   "story": "S01"
+  },
+  {
+   "id": "try-scope",
+   "label": "Case 2: token-scope gate",
+   "description": "The same policy and tool refuse a token without the scope and serve one with it. Simulated; console text, not re-run here.",
+   "group": "try-it",
+   "action": {
+    "type": "route",
+    "href": "/#flow"
+   },
+   "terms": [
+    "token-scope",
+    "mock-door"
+   ],
+   "story": "S02"
+  },
+  {
+   "id": "try-actsub",
+   "label": "Case 3: agent act.sub gate",
+   "description": "One token, two tools, one act.sub policy each: the policy naming this agent lets the call through, the policy naming a different value refuses the same token with JSON-RPC -32600. Measured with one real agent; a second agent was not tested.",
+   "group": "try-it",
+   "action": {
+    "type": "route",
+    "href": "/#flow"
+   },
+   "terms": [
+    "act-sub",
+    "cedar-ai-policy"
+   ],
+   "story": "S03"
+  },
+  {
+   "id": "try-candidate",
+   "label": "Candidate state",
+   "description": "A Candidate policy is not enforced per the console documentation (not re-run here, UNVERIFIED), so the simulated call is allowed.",
+   "group": "try-it",
+   "action": {
+    "type": "route",
+    "href": "/#flow"
+   },
+   "terms": [
+    "active-candidate"
+   ],
+   "story": "S04"
+  },
+  {
+   "id": "card-setup",
+   "label": "Set up Cedar in Privilege",
+   "description": "The eight console steps: sign in, AI Policies, New Policy, Candidate, template, the Cedar preview, Create Policy and Validation, Enforce and test. Console text, labelled line by line.",
+   "group": "setup",
+   "action": {
+    "type": "route",
+    "href": "/#setup"
+   },
+   "terms": [
+    "active-candidate"
+   ],
+   "story": "S05"
+  },
+  {
+   "id": "card-is",
+   "label": "What Cedar is and is not",
+   "description": "A per-call rule engine that can narrow, with three actions. Console text: not authentication, not instant, not everything. UNVERIFIED, believed and not tested here: not a grant, not the RequiredClaims gate, not a regex engine. Each line is labelled measured, console text or UNVERIFIED.",
+   "group": "concept",
+   "action": {
+    "type": "route",
+    "href": "/#is"
+   },
+   "terms": [
+    "cedar-ai-policy",
+    "required-claims"
+   ],
+   "story": "S05"
+  },
+  {
+   "id": "card-measured",
+   "label": "Measured on a real tenant, 2026-11-16",
+   "description": "The result of the real run, for the act.sub case only, shown as static evidence apart from the mock runs, with what was not measured.",
+   "group": "reference",
+   "action": {
+    "type": "route",
+    "href": "/#evidence"
+   },
+   "story": "S06"
+  }
+ ],
+ "stories": [
+  {
+   "id": "S01",
+   "title": "Hold for a human",
+   "say": "A forbid on the unattended action holds the call until an approval is on record. The call waits; it is not refused. Simulated here."
+  },
+  {
+   "id": "S02",
+   "title": "Token-scope gate",
+   "say": "Same policy, same tool: a token without the scope is refused and the reason names it, a token with the scope is served. Simulated here."
+  },
+  {
+   "id": "S03",
+   "title": "Agent act.sub gate",
+   "say": "Where the policy names this agent the call passes; where it names a different value the same token is refused. Measured once with one real agent; no second agent was tested."
+  },
+  {
+   "id": "S04",
+   "title": "Candidate first",
+   "say": "Per the console documentation (not re-run) a Candidate is not enforced. Start there, move to Active when you are happy."
+  },
+  {
+   "id": "S05",
+   "title": "Set up and limits",
+   "say": "Eight console steps, then what Cedar is and is not: a per-call rule engine that can narrow, not authentication (console text), and believed not to be a grant (UNVERIFIED). Every line says whether it is measured, console text or UNVERIFIED."
+  },
+  {
+   "id": "S06",
+   "title": "What was measured",
+   "say": "One real client with one act.sub and two Active policies: the policy naming a different value refused the same token. In one run the first poll, about 7 seconds after creation, already showed the refusal: one observation, not a propagation time. A second real agent was not measured."
+  }
+ ]
+}

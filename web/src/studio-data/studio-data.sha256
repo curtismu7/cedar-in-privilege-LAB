@@ -1,0 +1,2 @@
+# Studio data vendored byte for byte, never hand-edited. cedar-in-privilege-flow.json is the diagram-studio repo's CEDAR_IN_PRIVILEGE_FLOW (core/src/apps.js, id cedar-in-privilege-flow), exported as JSON.stringify(flow, null, 2) plus a newline, from the studio's main (PR 18, merged as 73c4c5a). To re-vendor, export again and re-pin: shasum -a 256 cedar-in-privilege-flow.json
+0d737fc344183d10795dd3211c39036fd8e03bbfccf17e99ab328df5359d57dd  cedar-in-privilege-flow.json

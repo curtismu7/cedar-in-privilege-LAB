@@ -1,0 +1,20 @@
+{
+  "id": "cedar-in-privilege-lab",
+  "name": "Cedar in Privilege",
+  "kind": "Demo",
+  "catalogId": "D135",
+  "description": "A guided tour of how Cedar AI policies work in PingOne Privilege: hold a call for a human, gate a token scope, gate an agent's act.sub. All three simulated here; only act.sub was measured, once, on a real tenant (one real agent). Includes a set-up guide and what Cedar is and is not.",
+  "port": 7820,
+  "healthPath": "/api/health",
+  "composeFile": "docker-compose.yml",
+  "url": "http://localhost:7820",
+  "tags": [
+    "pingone-privilege",
+    "pingfederate",
+    "agent-identity",
+    "authorization-policy",
+    "simulated"
+  ],
+  "pingProducts": [],
+  "contentPack": "content-pack.json"
+}

@@ -1,0 +1,21 @@
+name: cedar-in-privilege-lab
+
+services:
+  cedar-in-privilege-lab:
+    build: .
+    image: cedar-in-privilege-lab:latest
+    container_name: cedar-in-privilege-lab
+    ports:
+      - "127.0.0.1:${HOST_PORT:-7820}:7820"
+    environment:
+      - PORT=7820
+      - BIND_ALL=1
+      - LAB_ALLOWED_HOSTS=localhost:${HOST_PORT:-7820},127.0.0.1:${HOST_PORT:-7820},cedar-in-privilege-lab.local.ping-devops.com:7820,cedar-in-privilege-lab:7820,cedar-in-privilege-lab.local.ping-devops.com:8443,local.ping-devops.com:8443
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
