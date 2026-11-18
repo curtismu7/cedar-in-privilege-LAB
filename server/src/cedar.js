@@ -22,6 +22,7 @@ export const SCOPE_LIST = "index:list-example";
 
 export const ACTION_INVOKE = "mcp:Invoke";
 export const ACTION_UNATTENDED = "mcp:InvokeUnattended";
+export const DEMO_OTP = "123123";
 
 // A tool, agent, scope or approver id goes into Cedar text, so it must be plain: no quotes, no newlines, nothing that ends the string early.
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
@@ -113,6 +114,22 @@ export function decide(policies, call) {
 }
 
 export const approvalIdFor = (n) => `approval-example-${n}`;
+
+// The approver's PingID step-up, mock. The approval belongs to a person, and in the measured real run the approver's own sign-in
+// required PingID (a push on the phone) before the decision counted. The mock models that gate on the APPROVAL step: the human must
+// complete one of the mock factors (mobile push or the demo OTP) before the approval is recorded. Measured 2026-11-18: the Multi_Factor
+// sign-on policy (PINGID_AUTHENTICATION action) fired at sign-in; the approval leg of Privilege's own HITL flow was console-side.
+export const STEP_UP_FACTORS = [
+  { id: "push", label: "Mobile push (mock PingID)" },
+  { id: "otp", label: "One-time code (mock PingID OTP)" }
+];
+
+// Verify one mock step-up attempt. Push: the human taps Approve. OTP: the code must equal DEMO_OTP. The attempt is single-use.
+export function verifyStepUp({ factor, otp }) {
+  if (factor === "push") return { ok: true };
+  if (factor === "otp") return { ok: otp === DEMO_OTP, reason: otp === DEMO_OTP ? undefined : `wrong code: expected the demo OTP ${DEMO_OTP}` };
+  return { ok: false, reason: "unknown factor" };
+}
 
 // One tools/call through the mock door. Returns the HTTP status, the verdict, the JSON-RPC refusal or the hold, and the hops (for the trace).
 // `action` is the Cedar action the call carries; how the real gateway tells an unattended call from an attended one was not measured

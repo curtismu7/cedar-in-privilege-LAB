@@ -15,7 +15,11 @@ test("web/src/top-menu/* matches top-menu.sha256 and both files are pinned", () 
   const dir = "web/src/top-menu";
   const p = pins(`${dir}/top-menu.sha256`);
   assert.deepEqual(p.map(([, f]) => f).sort(), ["TopMenu.jsx", "top-menu.css"]);
-  for (const [hash, file] of p) assert.equal(sha(`${dir}/${file}`), hash, `${file} differs from top-menu.sha256 (hand-edited, or re-vendored without re-pinning)`);
+  for (const [hash, file] of p) {
+    // The canonical pin names the files bare; vendored pins may carry them pathed (web/src/top-menu/...). Accept either, verify the basename.
+    const local = file.replace(/^.*\//, "");
+    assert.equal(sha(`${dir}/${local}`), hash, `${file} differs from top-menu.sha256 (hand-edited, or re-vendored without re-pinning)`);
+  }
 });
 
 test("web/src/components/JsonPane.* matches its pin files", () => {

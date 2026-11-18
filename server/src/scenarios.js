@@ -19,6 +19,9 @@ export const policiesFor = (specs, state = "Active") => specs.map((s) => makePol
 const unattended = (tool) => ({ tool, action: ACTION_UNATTENDED });
 const attended = (tool) => ({ tool, action: ACTION_INVOKE });
 const APPROVE = { approve: true };
+// An approval gated on the approver's own step-up (mock PingID). The UI collects the factor choice (or the push tap) before the run
+// reaches the approval step; the scenario data only marks that this run's approval is step-up gated.
+const APPROVE_WITH_STEPUP = { approve: true, stepUp: true };
 
 // Per case: what the shape is, where it came from, and where its real counterpart runs. Plain text; no links.
 export const CASES = [
@@ -39,6 +42,12 @@ export const CASES = [
     summary: "The measured case. Two tools, one act.sub policy each: the tool whose policy names this agent is allowed, the tool whose policy names a different value is refused.",
     source: "measured: one real agent on a real tenant, 2026-11-16 (the Measured card below). The Cedar lines around the contains(...) test are UNVERIFIED. The extra Candidate scenario is simulated.",
     real: "Its real counterpart is the owner-run probe in cedar-act-sub-LAB (npm run real there), which reproduced the measured table. Not run here."
+  },
+  {
+    id: "stepup", n: 4, title: "Approver PingID step-up", action: ACTION_UNATTENDED, basis: "simulated (approval leg measured separately)",
+    summary: "The hold's human approval itself requires PingID: the approver must complete a step-up (mock mobile push or OTP) before the approval records and the retry goes through. A rogue agent cannot approve as the human.",
+    source: "the step-up leg is measured: 2026-11-18, a real PingID mobile device enrolled per persona and a full sign-in chain run (password, push, approve, code issued). The composition with a real Privilege hold is simulated: the approval in the real HITL flow is console-side and its own sign-in policy was not tested.",
+    real: "Its real counterparts: the Privilege AI Policies hold page of the full demo app (the hold), and the PingID enrolment + step-up run of 2026-11-18 (the step-up). Not composed and run here."
   }
 ];
 
@@ -91,13 +100,29 @@ export const SCENARIOS = [
     title: "3.3 Candidate state",
     what: "Both policies exist but are Candidate. Per the Privilege console documentation (not re-run here, UNVERIFIED) a Candidate is not enforced, so the mock allows ListIndexTool even though its policy names a different value. Only Active is enforced here.",
     say: "Per the console documentation (not re-run here), a policy that is still a Candidate is not enforced. If a refusal you expected does not happen, check the state first."
+  },
+  {
+    id: "stepup-1-approve", case: "stepup", n: 1, label: "Hold, step-up, approve, retry", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    calls: [unattended("SearchIndexTool"), APPROVE_WITH_STEPUP, unattended("SearchIndexTool")], expect: ["held", "approved", "allowed"], basis: "simulated",
+    stepUp: true,
+    title: "4.1 Hold, PingID step-up, approve, retry",
+    what: "The call is held for a human (case 1's policy). The human opens the approval — and the approval requires their own step-up first: a mock PingID challenge (mobile push or the demo OTP 123123). Only a completed step-up records the approval; the agent retries and approval_count satisfies the unless clause. In the real tenant the approver's sign-in carried this exact gate (Multi_Factor policy, PingID_AUTHENTICATION action, measured 2026-11-18); the composition is simulated.",
+    say: "The held call waits. The human's approval is itself protected: they complete a PingID step-up (push or code) before the approval records. A stolen agent session cannot approve — the step-up belongs to the person's device, not the agent."
+  },
+  {
+    id: "stepup-2-refused", case: "stepup", n: 2, label: "Step-up failed: approval never records", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    calls: [unattended("SearchIndexTool"), APPROVE_WITH_STEPUP, unattended("SearchIndexTool")], expect: ["held", "rejected", "held"], basis: "simulated",
+    stepUp: true, stepUpFails: true,
+    title: "4.2 Step-up failed: the hold stands",
+    what: "The same hold, but the approver's step-up does not complete (the wrong OTP, or the push is denied). The approval never records, so approval_count stays 0 and the retry is held again — the agent cannot collect an approval without the human's own step-up. The run ends with the call still held, and the approval id is single-use so nothing carries over.",
+    say: "No step-up, no approval: the hold stands and the retry is held again. The gate cannot be satisfied by the agent waiting, retrying or replaying — only the person's own factor completes it."
   }
 ];
 
 export const CASE_IDS = CASES.map((c) => c.id);
 
 export const MOCK_NOTE =
-  "The mock door is an in-process evaluator of three rule shapes (hold for a human, token scope, agent act.sub), each compared exactly. It is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant; the hold and scope cases are simulated.";
+  "The mock door is an in-process evaluator of three rule shapes (hold for a human, token scope, agent act.sub), each compared exactly. It is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant; the hold and scope cases are simulated. The approver's PingID step-up (case 4) is a mock gate on the approval step: the step-up factor itself is measured (2026-11-18 enrolment + sign-in chain), the composition with a real Privilege hold is not.";
 
 // Static evidence for the act.sub case. It is NOT produced by a mock run and is shown apart from them, labelled with its date.
 export const EVIDENCE = {
@@ -133,5 +158,22 @@ export const EVIDENCE = {
     "UNVERIFIED, per the Privilege console documentation and not re-run here: a Candidate policy is not enforced, only Active is."
   ],
   command: "npm run real",
-  commandNote: "Real is not available in this lab: this server never calls out. The owner-run probe lives in cedar-act-sub-LAB: run npm run real there, in a terminal, with its own local .env (see that lab's .env.example). It mints a client-credentials token and calls tools/list, CountTool and ListIndexTool; it never creates or deletes policies. It was run against a real PingFederate and door on 2026-11-16 in three states (no policy, two Active policies, policies deleted) and reproduced the three rows of the table above. To see hold and scope policies on a live door, use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app."
+  commandNote: "Real is not available in this lab: this server never calls out. The owner-run probe lives in cedar-act-sub-LAB: run npm run real there, in a terminal, with its own local .env (see that lab's .env.example). It mints a client-credentials token and calls tools/list, CountTool and ListIndexTool; it never creates or deletes policies. It was run against a real PingFederate and door on 2026-11-16 in three states (no policy, two Active policies, policies deleted) and reproduced the three rows of the table above. To see hold and scope policies on a live door, use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app.",
+  stepUp: {
+    label: "Measured: PingID enrolment + step-up 2026-11-18",
+    setup: "A real PingOne environment with the Multi_Factor sign-on policy (PINGID_AUTHENTICATION action) assigned to an application. Two persona users, each enrolled at sign-in: password accepted, then the Welcome-to-PingID screen with a QR code and a manual pairing key; both devices read back PINGID_MOBILE / ACTIVE by API (worker token, p1:read:device). The ids here are examples.",
+    rows: [
+      { phase: "Policy prerequisite", result: "the MFA sign-on policy existed but was assigned to NO application out of the box — until it was assigned, no app ever prompted for enrolment or step-up" },
+      { phase: "Enrolment at sign-in", result: "hosted login: password, then the Welcome-to-PingID screen with a QR + a three-group pairing key; the first login doubles as the first push approval" },
+      { phase: "Worker API pairing", result: "refused: WORKER applications can only be granted the openid resource, so p1:create:pairingKey is unavailable to a worker token (403)" },
+      { phase: "Device state", result: "both personas: PINGID_MOBILE / ACTIVE, one device record per user, one physical phone" },
+      { phase: "Step-up at sign-in", result: "password accepted, then the PingID authenticator page, then the push on the phone; approving issued the authorization code (the code appeared in the redirect URL — a test-app callback 404 after approval is harmless)" }
+    ],
+    rowsNote: "Every row above is from the 2026-11-18 run. The composition with Privilege's Cedar hold (case 4's scenarios) is simulated: the real HITL approval is console-side and its sign-in policy was not tested there.",
+    notMeasured: [
+      "Privilege's own approval step requiring a PingID step-up: the measured step-up fired at application sign-in, not inside the Privilege HITL approval flow.",
+      "PingID denial, timeout and device-loss paths.",
+      "Whether the approver persona in a real Privilege hold inherits the same Multi_Factor policy."
+    ]
+  }
 };

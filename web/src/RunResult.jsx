@@ -15,6 +15,7 @@ function CopyButton({ text, label = "Copy" }) {
 export { CopyButton };
 
 const POLICY_KIND = { hold: "hold for a human", scope: "scope gate", actsub: "act.sub gate" };
+const VERDICT_LABEL = { approved: "APPROVED", rejected: "STEP-UP FAILED", held: "HELD", refused: "REFUSED", allowed: "ALLOWED" };
 
 // The Cedar of every policy the door held during the run, as this lab's mock generates it (a reconstruction of the template's shape).
 export function PolicyList({ policies }) {
@@ -52,10 +53,10 @@ export default function RunResult({ result }) {
       <PolicyList policies={result.policies} />
       <div className="call-list" data-testid="call-list">
         {result.calls.map((c) => (c.kind === "approval" ? (
-          <div key={c.index} className="call approved" data-testid={`approval-${c.index}`}>
+          <div key={c.index} className={`call ${c.ok ? "approved" : "refused"}`} data-testid={`approval-${c.index}`}>
             <strong>Human approval</strong>{" "}
-            <span className="chip verdict-allowed" data-testid={`verdict-approval-${c.index}`}>APPROVED</span>{" "}
-            <span className="hint">simulated</span>
+            <span className={`chip verdict-${c.ok ? "allowed" : "refused"}`} data-testid={`verdict-approval-${c.index}`}>{VERDICT_LABEL[c.verdict] || c.verdict.toUpperCase()}</span>{" "}
+            <span className="hint">simulated{c.stepUpFailed || c.ok && (c.reason || "").includes("PingID step-up") ? " · PingID step-up (mock)" : ""}</span>
             <p className="run-reason" data-testid={`reason-approval-${c.index}`}>{c.reason}</p>
           </div>
         ) : (

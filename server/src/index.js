@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import * as pf from "./pf.js";
-import { callTool, cedarText, ISSUER, DOOR_URL, AGENT_A, DOOR, APPROVER, approvalIdFor } from "./cedar.js";
+import { callTool, cedarText, ISSUER, DOOR_URL, AGENT_A, DOOR, APPROVER, approvalIdFor, verifyStepUp, STEP_UP_FACTORS, DEMO_OTP } from "./cedar.js";
 import { doorTrace, startTrace } from "./cedarTrace.js";
 import { installNetguard } from "./netguard.js";
 import { hostGuard, writeGuard, parseAllowedHosts } from "./guards.js";
@@ -66,16 +66,33 @@ function mintFor(kind, scope) {
 
 // Run one scenario against the mock door. Stateless: the scenario carries the policies the door holds while it runs. A call that is held
 // leaves an approval id; an { approve: true } step records one human approval (simulated), and later calls carry approval_count 1.
-export function runScenario(scenario, trace = startTrace()) {
+// A step-up-gated approval ({ approve: true, stepUp: true }) asks the client for the factor and answer; the request body carries it
+// (stepUp: { factor, otp } — push needs no otp). The step-up is single-use per run: one failure and the approval never records.
+export function runScenario(scenario, trace = startTrace(), stepUp = null) {
   const policies = policiesFor(scenario.policies, scenario.policyState);
   const token = mintFor(scenario.token, scenario.scope);
   let approvals = 0;
   const calls = scenario.calls.map((step, index) => {
     if (step.approve) {
+      if (step.stepUp) {
+        // A stepUpFails scenario IS the failure demo: whatever the client sends, the mock models a factor that does not complete
+        // (a push denied on the phone, or a wrong code). The scenario owns the outcome; the client's input is not honoured.
+        const forced = scenario.stepUpFails === true
+          ? { ok: false, reason: scenario.stepUpFailsReason || "the push was denied on the device (simulated)" }
+          : verifyStepUp(stepUp || {});
+        const attempt = forced;
+        if (!attempt.ok) {
+          return {
+            index, kind: "approval", tool: null, ok: false, verdict: "rejected", http: 401,
+            reason: `the approver's step-up failed: ${attempt.reason || "the factor was not completed"}. The approval never records; the hold stands.`,
+            approvalId: approvalIdFor(1), approver: APPROVER, approvals, hops: [], trace: null, stepUpFailed: true
+          };
+        }
+      }
       approvals += 1;
       return {
         index, kind: "approval", tool: null, ok: true, verdict: "approved", http: null,
-        reason: `a human approved ${approvalIdFor(1)} (simulated): approval_count is now ${approvals}`,
+        reason: `a human approved ${approvalIdFor(1)}${step.stepUp ? " after completing the PingID step-up" : ""} (simulated): approval_count is now ${approvals}`,
         approvalId: approvalIdFor(1), approver: APPROVER, approvals, hops: [], trace: null
       };
     }
@@ -143,7 +160,7 @@ export function buildServer({ netguard, customer = loadCustomerConfig() } = {}) 
 
   // The mock door still behaves as written: every scenario's verdicts match what it says. Refreshed in the background.
   const health = createHealth({
-    check: () => SCENARIOS.every((sc) => runScenario(sc).calls.every((c, i) => c.verdict === sc.expect[i]))
+    check: () => SCENARIOS.every((sc) => runScenario(sc, undefined, sc.stepUp && !sc.stepUpFails ? { factor: "push" } : undefined).calls.every((c, i) => c.verdict === sc.expect[i]))
   });
   app.use("/api/health", health.router);
 
@@ -195,12 +212,17 @@ export function buildServer({ netguard, customer = loadCustomerConfig() } = {}) 
 
   // Run a scenario by id against the mock door.
   app.post("/api/run", (req, res) => {
-    const { scenario } = req.body || {};
+    const { scenario, stepUp } = req.body || {};
     const found = SCENARIOS.find((s) => s.id === scenario);
     if (!found) return res.status(400).json({ error: "unknown_scenario", message: `unknown scenario; one of ${SCENARIOS.map((s) => s.id).join(", ")}` });
-    const run = runScenario(found, req.trace);
+    const run = runScenario(found, req.trace, stepUp);
     recordRun(req.workspace, run);
     res.json(run);
+  });
+
+  // The step-up factors the mock PingID gate offers, and the demo OTP (a labelled demo bypass, never a real credential).
+  app.get("/api/stepup", (req, res) => {
+    res.json({ factors: STEP_UP_FACTORS, demoOtp: DEMO_OTP });
   });
 
   app.get("/api/runs", (req, res) => res.json({ runs: runsOf(req.workspace) }));
