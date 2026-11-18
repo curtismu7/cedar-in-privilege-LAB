@@ -24,7 +24,8 @@ export const DEFAULT_PACK = "banking";
 export const STORIES = {
   hold: "{{cast.org}} runs a {{cast.agent}}. When it tries {{cast.sensitive}} with nobody watching, the policy says a {{cast.approver}} must approve first, so the call waits instead of failing. In this lab SearchIndexTool stands in for that search, and the whole case is simulated.",
   scope: "At {{cast.org}} the {{cast.agent}} may reach {{cast.record}} only when its token carries the matching scope. Without the scope the call is refused and the reason names it. In this lab SearchIndexTool stands in for that tool, and the whole case is simulated.",
-  actsub: "{{cast.org}} has two tools, and each tool's policy names which agent may call it. The {{cast.agent}} is let through on the tool that names it and refused on the tool that names a different value. In this lab CountTool and ListIndexTool stand in for those tools; this is the case with one measured run on a real tenant."
+  actsub: "{{cast.org}} has two tools, and each tool's policy names which agent may call it. The {{cast.agent}} is let through on the tool that names it and refused on the tool that names a different value. In this lab CountTool and ListIndexTool stand in for those tools; this is the case with one measured run on a real tenant.",
+  stepup: "At {{cast.org}} the held call waits for the {{cast.approver}} — and the approval itself is protected: the approver completes a step-up on their own device (a mock PingID push or code) before the approval records. A stolen agent session cannot approve as the human. In this lab the step-up gate is mock; the factor itself was measured on a real tenant (2026-11-18) and the composition with the hold is simulated."
 };
 
 const TOKEN = /\{\{cast\.([A-Za-z_]+)\}\}/g;

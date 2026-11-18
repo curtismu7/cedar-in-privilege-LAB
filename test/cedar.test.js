@@ -8,7 +8,7 @@ import { assertTrace } from "../server/src/gatewayTrace.js";
 import { SCENARIOS, CASES, EVIDENCE, MOCK_NOTE, policiesFor, POLICY_HOLD, POLICY_SCOPE, POLICY_A, POLICY_B } from "../server/src/scenarios.js";
 import { GUIDE, IS_IS_NOT, LABELS } from "../server/src/guide.js";
 import {
-  callTool, cedarText, claimActSub, claimScopes, policyForbids, decide, makePolicy,
+  callTool, cedarText, claimActSub, claimScopes, policyForbids, decide, makePolicy, DEMO_OTP,
   DOOR_URL, ISSUER, AGENT_A, AGENT_B, APPROVER, SCOPE_SEARCH, SCOPE_LIST, ACTION_INVOKE, ACTION_UNATTENDED
 } from "../server/src/cedar.js";
 
@@ -291,7 +291,8 @@ test("two Active policies on one tool: refused when either forbids, allowed only
 
 test("every scenario's verdicts match what its data says, every call count matches, and hold and scope cases are never marked measured", () => {
   for (const s of SCENARIOS) {
-    const r = runScenario(s);
+    // A step-up-gated scenario's approval step needs the factor answer: pass a succeeding push (the failing paths are tested below).
+    const r = runScenario(s, undefined, s.stepUp && !s.stepUpFails ? { factor: "push" } : undefined);
     assert.equal(r.calls.length, s.calls.length, s.id);
     assert.deepEqual(r.calls.map((c) => c.verdict), s.expect, s.id);
     // F12: every scenario RUN is a simulation. Two of them only say their outcome matches the real run (a separate flag, never the basis).
@@ -299,9 +300,51 @@ test("every scenario's verdicts match what its data says, every call count match
     if (s.case !== "actsub") assert.equal(s.matchesMeasured, undefined, `${s.id}: only the act.sub case has a measured result`);
   }
   assert.deepEqual(SCENARIOS.filter((s) => s.matchesMeasured === true).map((s) => s.id), ["actsub-1-baseline", "actsub-2-gate"]);
-  assert.deepEqual(CASES.map((c) => [c.id, c.basis]), [["hold", "simulated"], ["scope", "simulated"], ["actsub", "measured once"]]);
-  assert.deepEqual(SCENARIOS.map((s) => s.id), ["hold-1-held", "hold-2-approve", "scope-1-without", "scope-2-with", "actsub-1-baseline", "actsub-2-gate", "actsub-3-candidate"]);
+  assert.deepEqual(CASES.map((c) => [c.id, c.basis]), [["hold", "simulated"], ["scope", "simulated"], ["actsub", "measured once"], ["stepup", "simulated (approval leg measured separately)"]]);
+  assert.deepEqual(SCENARIOS.map((s) => s.id), ["hold-1-held", "hold-2-approve", "scope-1-without", "scope-2-with", "actsub-1-baseline", "actsub-2-gate", "actsub-3-candidate", "stepup-1-approve", "stepup-2-refused"]);
   for (const s of SCENARIOS) assert.ok(CASES.some((c) => c.id === s.case), s.id);
+});
+
+// ---- Case 4: the approver's PingID step-up (mock) ------------------------------------------------------------------
+
+test("case 4, stepup-1: the push completes the step-up, the approval records, the retry is allowed", () => {
+  const r = runScenario(SCENARIOS.find((s) => s.id === "stepup-1-approve"), undefined, { factor: "push" });
+  assert.deepEqual(r.calls.map((c) => c.verdict), ["held", "approved", "allowed"]);
+  const approval = r.calls[1];
+  assert.equal(approval.kind, "approval");
+  assert.equal(approval.ok, true);
+  assert.match(approval.reason, /after completing the PingID step-up/);
+  assert.equal(r.calls[2].http, 200);
+});
+
+test("case 4, stepup-1: the right OTP completes the step-up; a wrong one never records the approval and the hold stands", () => {
+  const good = runScenario(SCENARIOS.find((s) => s.id === "stepup-1-approve"), undefined, { factor: "otp", otp: DEMO_OTP });
+  assert.deepEqual(good.calls.map((c) => c.verdict), ["held", "approved", "allowed"]);
+  const bad = runScenario(SCENARIOS.find((s) => s.id === "stepup-1-approve"), undefined, { factor: "otp", otp: "999999" });
+  assert.deepEqual(bad.calls.map((c) => c.verdict), ["held", "rejected", "held"], "a wrong code leaves approval_count 0: the retry is held again");
+  assert.equal(bad.calls[1].http, 401);
+  assert.equal(bad.calls[1].stepUpFailed, true);
+  assert.match(bad.calls[1].reason, /step-up failed/);
+});
+
+test("case 4, stepup-1: no step-up answer means no approval (the client must send the factor)", () => {
+  const r = runScenario(SCENARIOS.find((s) => s.id === "stepup-1-approve"));
+  assert.deepEqual(r.calls.map((c) => c.verdict), ["held", "rejected", "held"]);
+  assert.equal(r.calls[1].http, 401);
+});
+
+test("case 4, stepup-2: the scenario forces the failure (a denied push); no client answer can complete it", () => {
+  for (const answer of [{ factor: "push" }, { factor: "otp", otp: DEMO_OTP }]) {
+    const r = runScenario(SCENARIOS.find((s) => s.id === "stepup-2-refused"), undefined, answer);
+    assert.deepEqual(r.calls.map((c) => c.verdict), ["held", "rejected", "held"], JSON.stringify(answer));
+    assert.equal(r.calls[1].http, 401);
+    assert.match(r.calls[1].reason, /step-up failed/);
+  }
+});
+
+test("case 4: the step-up gate is on the approval only; the agent's own call never carries it", () => {
+  const r = runScenario(SCENARIOS.find((s) => s.id === "stepup-1-approve"), undefined, { factor: "push" });
+  assert.equal(r.calls[0].hops.every((h) => !/pingid|step-up/i.test(h.reason)), true, "the held call's hops name the hold, not a step-up");
 });
 
 test("every call's trace passes assertTrace, is source mock with every decision 'checked', and a hold is an info decision, never a pass", () => {
@@ -351,7 +394,7 @@ test("catalog serves the three cases, the seven scenarios in order, the guide, t
     assert.equal(cat.status, 200);
     assert.equal(cat.body.door, "door-example");
     assert.equal(cat.body.mockNote, MOCK_NOTE);
-    assert.deepEqual(cat.body.cases.map((c) => c.id), ["hold", "scope", "actsub"]);
+    assert.deepEqual(cat.body.cases.map((c) => c.id), ["hold", "scope", "actsub", "stepup"]);
     assert.deepEqual(cat.body.scenarios.map((s) => s.id), SCENARIOS.map((s) => s.id));
     assert.deepEqual(cat.body.scenarios.map((s) => s.callCount), SCENARIOS.map((s) => s.calls.length));
     assert.ok(cat.body.scenarios.every((s) => !("policies" in s) && !("calls" in s)), "the catalog does not ship the policy specs or call lists");
@@ -367,7 +410,7 @@ test("catalog serves the three cases, the seven scenarios in order, the guide, t
 test("POST /api/run answers every scenario, records it, and a hostile scenario id is a 400 and never a lookup on Object.prototype", async () => {
   await withApi(async (j) => {
     for (const s of SCENARIOS) {
-      const r = await j("/api/run", { scenario: s.id });
+      const r = await j("/api/run", { scenario: s.id, ...(s.stepUp && !s.stepUpFails ? { stepUp: { factor: "push" } } : {}) });
       assert.equal(r.status, 200, s.id);
       assert.equal(r.body.scenario, s.id);
       assert.deepEqual(r.body.calls.map((c) => c.verdict), s.expect);
