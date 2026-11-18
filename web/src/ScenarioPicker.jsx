@@ -36,8 +36,8 @@ export default function ScenarioPicker({ cases, scenarios, active, onSelect, sto
         <div key={c.id} className="case" data-testid={`case-${c.id}`}>
           <h3>
             {c.n}. {c.title}{" "}
-            <span className={`chip ${c.basis === "simulated" ? "basis-unmeasured" : "basis-measured"}`} data-testid={`case-basis-${c.id}`}>
-              {c.basis === "simulated" ? "simulated here" : "measured once, 2026-11-16"}
+            <span className={`chip ${c.basis === "simulated" ? "basis-unmeasured" : c.basis === "measured once" ? "basis-measured" : "basis-partial"}`} data-testid={`case-basis-${c.id}`}>
+              {c.basis === "simulated" ? "simulated here" : c.basis === "measured once" ? "measured once, 2026-11-16" : "simulated; step-up factor measured 2026-11-18"}
             </span>
           </h3>
           <p>{c.summary}</p>
