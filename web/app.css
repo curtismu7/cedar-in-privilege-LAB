@@ -149,6 +149,12 @@ main {
   color: var(--status-warn);
 }
 
+/* Partial basis: some legs simulated, some measured (the step-up case). Info border like the measured chip, honest label. */
+.basis-partial {
+  border-color: var(--status-info);
+  color: var(--status-info);
+}
+
 .state-active {
   border-color: var(--status-ok);
   color: var(--status-ok);
