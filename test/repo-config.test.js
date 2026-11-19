@@ -71,7 +71,9 @@ test("ATTR the shipped attribution script is the AI-DEMO-Standalone shared copy 
 // Run the shipped script against throwaway repos: a clean one passes, an AI co-author trailer and a credit line fail.
 function scratchRepo(message) {
   const dir = mkdtempSync(join(tmpdir(), "attr-"));
-  const git = (...args) => execFileSync("git", ["-c", "user.name=T", "-c", "user.email=t@example.invalid", ...args], { cwd: dir, stdio: "pipe" });
+  // -c core.hooksPath=: a developer's global commit-msg hook (the owner's attribution guard) must not
+  // reject the scratch repo's own commits; the script under test does the rejecting.
+  const git = (...args) => execFileSync("git", ["-c", "user.name=T", "-c", "user.email=t@example.invalid", "-c", "core.hooksPath=/dev/null", ...args], { cwd: dir, stdio: "pipe" });
   git("init", "-q");
   mkdirSync(join(dir, "scripts"));
   cpSync(join(root, "scripts/check-no-ai-attribution.sh"), join(dir, "scripts/check-no-ai-attribution.sh"));
