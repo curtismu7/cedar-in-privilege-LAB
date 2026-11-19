@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # The vendored shared stylesheet must match the hash pinned when it was last re-vendored.
+      - run: bash scripts/check-ui-standard.sh
       - run: node scripts/doctor.mjs
 
   # The real gate: a FAIL exits non-zero and fails the job (new app, Demo tier).
