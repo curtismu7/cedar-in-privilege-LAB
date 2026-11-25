@@ -3,12 +3,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildServer, readState } from "../server/src/index.js";
+import { stop, startVerified } from "./test-helpers.js";
 
 async function withServer(fn) {
   const saved = process.env.LAB_ALLOWED_HOSTS;
   process.env.LAB_ALLOWED_HOSTS = "localhost:7820,127.0.0.1:7820";
-  const srv = buildServer().listen(0, "127.0.0.1");
-  await new Promise((r) => srv.on("listening", r));
+  const srv = await startVerified(async () => {
+    const s = buildServer().listen(0, "127.0.0.1");
+    await new Promise((r) => s.on("listening", r));
+    return s;
+  });
   const base = `http://127.0.0.1:${srv.address().port}`;
   // ws: undefined = send no X-Workspace-Id header; any string (even "") is sent as given.
   const api = async (method, path, { ws, body } = {}) => {
@@ -20,7 +24,7 @@ async function withServer(fn) {
     return { status: res.status, body: await res.json() };
   };
   try { await fn(api); } finally {
-    srv.close();
+    await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
   }
 }
