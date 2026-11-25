@@ -164,6 +164,15 @@ export function buildServer({ netguard, customer = loadCustomerConfig() } = {}) 
   });
   app.use("/api/health", health.router);
 
+  // Test-suite port verification (active only when the test helper sets WI_VERIFY_PORT):
+  // the verifier round-trips a unique marker through the app itself, proving the connection
+  // reached THIS server and not a foreign listener the OS shared the ephemeral port with.
+  app.get("/api/__port-verify", (req, res) => {
+    if (!process.env.WI_VERIFY_PORT) return res.status(404).json({ error: "not_found" });
+    res.setHeader("x-wi-port-verify", String(req.headers["x-wi-port-verify"] || ""));
+    res.json({ ok: true });
+  });
+
   // Rule 19: Real is owner-only here. The toggle is shown but disabled, with this reason; the server never calls out.
   app.get("/api/info", (req, res) => {
     res.json({ source: state.source, realAvailable: false, realReason: REAL_REASON });

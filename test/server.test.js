@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { request } from "node:http";
 import { readFileSync } from "node:fs";
 import { buildServer, readState, runScenario } from "../server/src/index.js";
+import { stop, startVerified } from "./test-helpers.js";
 import { installNetguard } from "../server/src/netguard.js";
 import { createHealth } from "../server/src/health.js";
 import express from "express";
@@ -28,7 +29,7 @@ async function withServer(fn) {
     return { status: res.status, body: await res.json() };
   };
   try { await fn(j, base); } finally {
-    srv.close();
+    await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
   }
 }
@@ -57,7 +58,7 @@ async function withRaw(env, fn, opts = {}) {
     req.end();
   });
   try { await fn(raw, port); } finally {
-    srv.close();
+    await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
   }
 }
@@ -328,8 +329,11 @@ test("HI-3 the write guard: same origin only, cross-site fetch metadata refused,
 });
 
 test("host check refuses unknown non-loopback hosts", async () => {
-  const srv = buildServer().listen(0, "127.0.0.1");
-  await new Promise((r) => srv.on("listening", r));
+  const srv = await startVerified(async () => {
+    const s = buildServer().listen(0, "127.0.0.1");
+    await new Promise((r) => s.on("listening", r));
+    return s;
+  });
   const port = srv.address().port;
   // node:http directly: fetch forbids setting the Host header.
   const status = await new Promise((resolve) => {
@@ -337,12 +341,15 @@ test("host check refuses unknown non-loopback hosts", async () => {
     req.end();
   });
   assert.equal(status, 403);
-  srv.close();
+  await stop(srv);
 });
 
 test("cross-origin write refused, and a non-JSON write is a 415", async () => {
-  const srv = buildServer().listen(0, "127.0.0.1");
-  await new Promise((r) => srv.on("listening", r));
+  const srv = await startVerified(async () => {
+    const s = buildServer().listen(0, "127.0.0.1");
+    await new Promise((r) => s.on("listening", r));
+    return s;
+  });
   const port = srv.address().port;
   const cross = await fetch(`http://127.0.0.1:${port}/api/run`, {
     method: "POST",
@@ -352,7 +359,7 @@ test("cross-origin write refused, and a non-JSON write is a 415", async () => {
   assert.equal(cross.status, 403);
   const text = await fetch(`http://127.0.0.1:${port}/api/run`, { method: "POST", headers: { "content-type": "text/plain" }, body: "x" });
   assert.equal(text.status, 415);
-  srv.close();
+  await stop(srv);
 });
 
 test("reset clears runs", async () => {
@@ -400,7 +407,7 @@ test("H3 health: a failing door check reports state broken (demo-health/1 shape 
     try {
       const res = await fetch(`http://127.0.0.1:${srv.address().port}/api/health`);
       return { status: res.status, body: await res.json() };
-    } finally { health.stop(); srv.close(); }
+    } finally { health.stop(); await stop(srv); }
   };
   const broken = await get(() => false);
   assert.equal(broken.status, 200);

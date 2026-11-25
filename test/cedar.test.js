@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildServer, runScenario } from "../server/src/index.js";
+import { stop, startVerified } from "./test-helpers.js";
 import * as pf from "../server/src/pf.js";
 import { assertTrace } from "../server/src/gatewayTrace.js";
 import { SCENARIOS, CASES, EVIDENCE, MOCK_NOTE, policiesFor, POLICY_HOLD, POLICY_SCOPE, POLICY_A, POLICY_B } from "../server/src/scenarios.js";
@@ -375,15 +376,18 @@ test("a mock-issued token is returned raw in the run, labelled mock, and is the 
 async function withApi(fn) {
   const saved = process.env.LAB_ALLOWED_HOSTS;
   process.env.LAB_ALLOWED_HOSTS = "localhost:7820,127.0.0.1:7820";
-  const srv = buildServer().listen(0, "127.0.0.1");
-  await new Promise((r) => srv.on("listening", r));
+  const srv = await startVerified(async () => {
+    const s = buildServer().listen(0, "127.0.0.1");
+    await new Promise((r) => s.on("listening", r));
+    return s;
+  });
   const base = `http://127.0.0.1:${srv.address().port}`;
   const j = async (path, body, method = "POST") => {
     const res = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(method !== "GET" ? { origin: base } : {}) }, body: method === "GET" ? undefined : JSON.stringify(body ?? {}) });
     return { status: res.status, body: await res.json() };
   };
   try { await fn(j); } finally {
-    srv.close();
+    await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
   }
 }

@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildServer } from "../server/src/index.js";
+import { stop, startVerified } from "./test-helpers.js";
 import { STORIES, PACKS, CAST_KEYS, DEFAULT_PACK, tokensOf, renderStory, storiesFor, packList } from "../server/src/stories.js";
 import { parseCustomerConfig, loadCustomerConfig } from "../server/src/customer.js";
 import { CASES } from "../server/src/scenarios.js";
@@ -62,11 +63,14 @@ test("customer.config: a valid org and pack are used, anything else is ignored",
 async function withApp(opts, fn) {
   const saved = process.env.LAB_ALLOWED_HOSTS;
   process.env.LAB_ALLOWED_HOSTS = "localhost:7820,127.0.0.1:7820";
-  const srv = buildServer(opts).listen(0, "127.0.0.1");
-  await new Promise((r) => srv.on("listening", r));
+  const srv = await startVerified(async () => {
+    const s = buildServer(opts).listen(0, "127.0.0.1");
+    await new Promise((r) => s.on("listening", r));
+    return s;
+  });
   const base = `http://127.0.0.1:${srv.address().port}`;
   try { await fn(async (q) => { const r = await fetch(`${base}/api/catalog${q}`); return { status: r.status, body: await r.json() }; }); } finally {
-    srv.close();
+    await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
   }
 }
