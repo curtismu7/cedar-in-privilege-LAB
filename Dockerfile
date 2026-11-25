@@ -13,6 +13,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
+COPY video/captions.md ./video/captions.md
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 7820

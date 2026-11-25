@@ -6,5 +6,6 @@ import "./components/JsonPane.css";
 import "./components/VerifyMark.css";
 import "./gateway-trace/gateway-trace.css";
 import "../app.css";
+import "./story/story.css";
 
 createRoot(document.getElementById("root")).render(<App />);
