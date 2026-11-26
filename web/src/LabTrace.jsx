@@ -8,7 +8,7 @@ import GatewayTrace from "./gateway-trace/GatewayTrace";
 export const TRACE_TITLE = "What the mock door did (simulated)";
 export const TRACE_BASIS =
   "Simulated: this lab's in-process mock door computed every request, reply and decision below. It is not Privilege and not a Cedar engine. " +
-  "Real is not available in this lab; the measured card further down is the record from the real tenant, and it covers the act.sub case only.";
+  "Real mode (owner-gated, with a local .env) runs the read-only probe from the page for the act.sub case; the measured card further down is the record from the real tenant, and it covers the act.sub case only.";
 
 // The panel's default marks `result` as hot, which draws an allowed (200) reply in the same strong style as a refusal's `error`. Only the
 // refusal is an alert here, so the panel is told to mark `error` alone.

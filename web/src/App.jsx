@@ -10,6 +10,7 @@ import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
 import SimulationBanner from "./Banner.jsx";
 import FlowSim from "./FlowSim.jsx";
+import RealRunPanel from "./RealRunPanel.jsx";
 import ScenarioPicker from "./ScenarioPicker.jsx";
 import Evidence from "./Evidence.jsx";
 import { SetupGuide, IsIsNot } from "./Guide.jsx";
@@ -161,11 +162,15 @@ export default function App() {
                 </select>
               </label>
               <StoryToggle key={toggleKey} prefix={STORY_PREFIX} onChange={onView} />
-              {realOff && (
+              {realOff ? (
                 <span id="real-reason" className="real-reason" data-testid="real-reason">
-                  Real is not available in this lab. The one real result is the Measured card; to run it yourself see <code>npm run real</code> in cedar-act-sub-LAB.
+                  Real needs the owner's local .env: with one, Real runs the read-only probe from this page; without one, the Measured card stays the one real record.
                 </span>
-              )}
+              ) : source === "real" ? (
+                <span id="real-reason" className="real-reason" data-testid="real-on-hint">
+                  REAL mode: the Real run panel below talks to your PingFederate and door (act.sub case). Hold and scope cases stay simulated.
+                </span>
+              ) : null}
             </>}
           >
             <ShelfLink headers={workspaceHeaders()} />
@@ -194,6 +199,7 @@ export default function App() {
         )}
         <ScenarioPicker cases={(data && data.cases) || []} scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} stories={data && data.stories} packs={data && data.packs} pack={data && data.pack} onPack={setPack} />
         <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} />
+        {source === "real" && <RealRunPanel />}
         <SetupGuide guide={data && data.guide} />
         <IsIsNot panel={data && data.isIsNot} />
         <Evidence evidence={data && data.evidence} />

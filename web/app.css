@@ -387,3 +387,25 @@ td {
   border-left: 3px solid var(--border);
   padding-left: 10px;
 }
+
+/* Real run panel (owner-gated Real mode) */
+.real-run .badge.real {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--danger-text, #b00020);
+  color: var(--danger-text, #b00020);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.real-run table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.real-run th, .real-run td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border, #d8d8d8); font-size: 0.9375rem; }
+.real-run .verdict { font-family: var(--font-mono); font-size: 0.875rem; }
+.real-run .verdict-allowed { color: var(--ok-text, #1b7f3b); }
+.real-run .verdict-refused-by-policy, .real-run .verdict-token-rejected, .real-run .verdict-refused-at-grant { color: var(--danger-text, #b00020); }
+.real-run .verdict-unreadable { color: var(--warn-text, #8a6d00); }
+.real-run .real-token { margin-top: 10px; }
+.real-run .real-token-value { display: block; margin-top: 6px; word-break: break-all; font-family: var(--font-mono); font-size: 0.8125rem; }
+.real-run .real-error { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--danger-text, #b00020); border-left: 4px solid var(--danger-text, #b00020); border-radius: 8px; color: var(--danger-text, #b00020); }

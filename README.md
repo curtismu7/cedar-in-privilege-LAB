@@ -29,7 +29,7 @@ Every call shows **What the mock door did (simulated)** (the family's shared tra
 
 ## Modes (rule 19)
 
-A Mock / Real toggle sits in the header. The lab runs in **Mock**. **Real is not available in this lab** and is disabled in the page, with the reason as visible text beside the toggle (linked to it with `aria-describedby`, and its tooltip); `POST /api/mode {"source":"real"}` answers 409 and the server never makes an outbound call (netguard with a self-test stays on). The one real result is the Measured card. To run it yourself, use the owner-run probe in cedar-act-sub-LAB (`npm run real` there). To see hold and scope policies on a live door, use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app. This lab has no real probe of its own.
+A Mock / Real toggle sits in the header. The lab runs in **Mock**. **Real is owner-gated**: with a valid local `.env` (same shape as cedar-act-sub-LAB's, see `.env.example` there — this lab ships the same probe library and reads the same five values) the server lets the page run the read-only probe for the act.sub case (one client-credentials token, tools/list, CountTool, ListIndexTool — never a policy change), through a netguard hole scoped to exactly the two `.env` origins and only for the run's duration, and the page renders the verdicts with a REAL label; the hold and scope cases stay simulated even in Real mode. Without a `.env` the toggle is disabled with the reason as visible text beside the toggle (linked to it with `aria-describedby`, and its tooltip), `POST /api/mode {"source":"real"}` answers 409, and the server never makes an outbound call (netguard with a self-test stays on). The one recorded real result is the Measured card (2026-11-16).
 
 ## The diagram (rule 17)
 

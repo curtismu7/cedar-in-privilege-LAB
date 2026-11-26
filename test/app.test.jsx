@@ -34,7 +34,7 @@ const catalog = (pack = "banking") => ({
   isIsNot: IS_IS_NOT,
   evidence: EVIDENCE
 });
-const REAL_REASON = "Real is not available in this lab: the server never calls out. cedar-act-sub-LAB (npm run real there)";
+const REAL_REASON = "Real is owner-gated: with a valid local .env the page runs the read-only probe for the act.sub case (the server never calls out without it; a run is the four read-only POSTs npm run real makes). The hold and scope cases stay simulated: to see hold and scope policies on a live door use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app.";
 const j = (body, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 
 // `fail`: (path) => undefined | "reject" | { status, html: true }
@@ -82,16 +82,15 @@ describe("the page", () => {
     for (const id of ["mode-select", "theme-select", "presenter", "reset"]) expect(within(menu).getByTestId(id)).toBeTruthy();
   });
 
-  it("the Real option is disabled with a visible reason that points to the sibling probe and the full demo app; Mock is the pressed value", async () => {
+  it("the Real option is disabled with a visible reason that names the .env gate and the simulated hold/scope cases; Mock is the pressed value", async () => {
     mockFetch();
     render(<App />);
     await waitFor(() => expect(screen.getByTestId("mode-real").disabled).toBe(true));
     expect(screen.getByTestId("mode-real").title).toBe(REAL_REASON);
     expect(screen.getByTestId("mode-select").value).toBe("mock");
     const reason = screen.getByTestId("real-reason");
-    expect(reason.textContent).toMatch(/Real is not available in this lab/);
-    expect(reason.textContent).toMatch(/npm run real/);
-    expect(reason.textContent).toMatch(/cedar-act-sub-LAB/);
+    expect(reason.textContent).toMatch(/Real needs the owner's local \.env/);
+    expect(reason.textContent).toMatch(/read-only probe/);
     expect(screen.getByTestId("mode-select").getAttribute("aria-describedby")).toBe("real-reason");
   });
 
@@ -139,7 +138,7 @@ describe("the page", () => {
     expect(screen.getByTestId("case-source-actsub").textContent).toMatch(/measured: one real agent/);
     expect(screen.getByTestId("case-real-hold").textContent).toMatch(/Privilege AI Policies page of the full demo app/);
     expect(screen.getByTestId("case-real-scope").textContent).toMatch(/PingFederate Token Demo page of the full demo app/);
-    expect(screen.getByTestId("case-real-actsub").textContent).toMatch(/cedar-act-sub-LAB \(npm run real there\)/);
+    expect(screen.getByTestId("case-real-actsub").textContent).toMatch(/owner-gated Real mode/);
   });
 
   it("each case tells its story in the picked vertical pack; changing the pack reloads the catalog with it and leaves the results alone", async () => {
@@ -281,7 +280,7 @@ describe("the page", () => {
     expect(within(evidence).getByTestId("evidence-label").textContent).toBe("Measured on a real tenant 2026-11-16");
     expect(evidence.querySelector("h2").textContent).toMatch(/act\.sub case only/);
     expect(within(evidence).getByTestId("real-command").textContent).toBe("npm run real");
-    expect(evidence.textContent).toMatch(/Real is not available in this lab/);
+    expect(evidence.textContent).toMatch(/Real is owner-gated in this lab/);
     // F10: the sentence that separates measured from simulated.
     expect(within(evidence).getByText("This card is static text, not a run of the mock above.")).toBeTruthy();
   });

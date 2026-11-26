@@ -115,9 +115,8 @@ test("mode: Real is refused 409 with the reason, bogus 400, mock accepted", asyn
     const real = await j("/api/mode", { source: "real" });
     assert.equal(real.status, 409);
     assert.equal(real.body.error, "real_unavailable");
-    assert.match(real.body.message, /not available in this lab/);
-    assert.match(real.body.message, /cedar-act-sub-LAB/);
-    assert.match(real.body.message, /npm run real/);
+    assert.match(real.body.message, /\.env/);
+    assert.match(real.body.message, /Mock/);
     const bogus = await j("/api/mode", { source: "bogus" });
     assert.equal(bogus.status, 400);
     assert.equal(typeof bogus.body.error, "string");
@@ -148,9 +147,8 @@ test("info reports Real unavailable with a visible reason", async () => {
     const body = await (await fetch(base + "/api/info", { headers: { host: HOST } })).json();
     assert.equal(body.realAvailable, false);
     assert.equal(body.source, "mock");
-    assert.match(body.realReason, /npm run real/);
-    assert.match(body.realReason, /cedar-act-sub-LAB/);
-    assert.match(body.realReason, /never calls out/);
+    assert.match(body.realReason, /\.env/);
+    assert.match(body.realReason, /Mock/);
   });
 });
 
