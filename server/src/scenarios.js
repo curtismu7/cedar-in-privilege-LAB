@@ -41,7 +41,7 @@ export const CASES = [
     id: "actsub", n: 3, title: "Agent act.sub gate", action: ACTION_INVOKE, basis: "measured once",
     summary: "The measured case. Two tools, one act.sub policy each: the tool whose policy names this agent is allowed, the tool whose policy names a different value is refused.",
     source: "measured: one real agent on a real tenant, 2026-11-16 (the Measured card below). The Cedar lines around the contains(...) test are UNVERIFIED. The extra Candidate scenario is simulated.",
-    real: "Its real counterpart is the owner-run probe in cedar-act-sub-LAB (npm run real there), which reproduced the measured table. Not run here."
+    real: "Its real counterpart is the read-only probe this lab can now run from the page in owner-gated Real mode (one token, tools/list, CountTool, ListIndexTool), which reproduced the measured table on 2026-11-16. Not run in Mock."
   },
   {
     id: "stepup", n: 4, title: "Approver PingID step-up", action: ACTION_UNATTENDED, basis: "simulated (approval leg measured separately)",
@@ -158,7 +158,7 @@ export const EVIDENCE = {
     "UNVERIFIED, per the Privilege console documentation and not re-run here: a Candidate policy is not enforced, only Active is."
   ],
   command: "npm run real",
-  commandNote: "Real is not available in this lab: this server never calls out. The owner-run probe lives in cedar-act-sub-LAB: run npm run real there, in a terminal, with its own local .env (see that lab's .env.example). It mints a client-credentials token and calls tools/list, CountTool and ListIndexTool; it never creates or deletes policies. It was run against a real PingFederate and door on 2026-11-16 in three states (no policy, two Active policies, policies deleted) and reproduced the three rows of the table above. To see hold and scope policies on a live door, use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app.",
+  commandNote: "Real is owner-gated in this lab: with a valid local .env (the same five values cedar-act-sub-LAB's probe reads) the page runs the same read-only probe — it mints a client-credentials token and calls tools/list, CountTool and ListIndexTool; it never creates or deletes policies. Without a .env this server never calls out. The probe shape was run against a real PingFederate and door on 2026-11-16 in three states (no policy, two Active policies, policies deleted) and reproduced the three rows of the table above. To see hold and scope policies on a live door, use the Privilege AI Policies and PingFederate Token Demo pages of the full demo app.",
   stepUp: {
     label: "Measured: PingID enrolment + step-up 2026-11-18",
     setup: "A real PingOne environment with the Multi_Factor sign-on policy (PINGID_AUTHENTICATION action) assigned to an application. Two persona users, each enrolled at sign-in: password accepted, then the Welcome-to-PingID screen with a QR code and a manual pairing key; both devices read back PINGID_MOBILE / ACTIVE by API (worker token, p1:read:device). The ids here are examples.",

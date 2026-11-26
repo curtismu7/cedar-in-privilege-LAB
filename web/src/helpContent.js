@@ -27,6 +27,6 @@ export const HELP_SECTIONS = [
   },
   {
     heading: "Mock and Real",
-    body: "The lab runs in Mock. Real is not available in this lab and is disabled in the page, with the reason shown beside the toggle. For the act.sub case the owner-run probe is in cedar-act-sub-LAB (npm run real there); the hold and scope cases run live on the Privilege AI Policies and PingFederate Token Demo pages of the full demo app."
+    body: "The lab runs in Mock. Real is owner-gated: with a valid local .env the server lets the page run the same read-only probe npm run real runs (the act.sub case: one token, tools/list, CountTool, ListIndexTool — never a policy change), with a REAL label on the results; the hold and scope cases stay simulated, and their live counterparts are the Privilege AI Policies and PingFederate Token Demo pages of the full demo app. Without a .env the toggle is disabled with the reason shown beside it."
   }
 ];

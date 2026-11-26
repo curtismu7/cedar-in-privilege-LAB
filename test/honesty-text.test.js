@@ -146,13 +146,14 @@ test("the page says plainly the evaluator is not a Cedar engine and decides noth
   assert.match(shown("server/src/scenarios.js"), /decides nothing real/);
 });
 
-test("Real is described as not available in this lab, pointing at the sibling probe and the full demo app, in plain text", () => {
+test("Real is described as owner-gated with a .env, the probe's read-only shape, and the hold/scope live counterparts, in plain text", () => {
   const idx = shown("server/src/index.js");
-  assert.match(idx, /Real is not available in this lab: the server never calls out/);
-  assert.match(idx, /cedar-act-sub-LAB \(npm run real there\)/);
+  assert.match(idx, /Real is owner-gated/);
+  assert.match(idx, /the server never calls out without it/);
   assert.match(idx, /Privilege AI Policies and PingFederate Token Demo pages of the full demo app/);
-  assert.match(shown("README.md"), /cedar-act-sub-LAB/);
-  assert.match(shown("docs/talk-track.md"), /Real is not available in this lab/);
+  assert.match(shown("README.md"), /Real is owner-gated/);
+  assert.match(shown("README.md"), /netguard hole scoped to exactly the two/);
+  assert.match(shown("docs/talk-track.md"), /Real runs the same read-only probe/);
 });
 
 // F05: what the page labels UNVERIFIED (narrowing only, not a grant, not the RequiredClaims gate, not a regex engine) is never stated as
