@@ -6,6 +6,9 @@ import dgram from 'node:dgram';
 import { isLoopbackHost } from './safety.js';
 
 let active = null;
+// Extra host predicates granted for a scoped, temporary window (real mode's two .env origins). Empty by default: the guard is fully closed.
+// The predicates come from validated .env values only (see realMode.js) and are removed when the window ends; a request can never add one.
+const extraAllow = new Set();
 
 export function installNetguard() {
   if (active) return active;
@@ -42,15 +45,16 @@ export function installNetguard() {
     if (typeof a === 'string' && Number.isNaN(Number(a))) return 'unix-socket';
     return typeof args[1] === 'string' ? args[1] : 'localhost';
   };
+  const hostOk = (h) => isLoopbackHost(h) || [...extraAllow].some((ok) => ok(h));
   net.Socket.prototype.connect = function guardedConnect(...args) {
     const host = hostOf(args);
-    if (!isLoopbackHost(host)) { attempts.push(`socket:${host}`); throw new Error(`network blocked: ${host}`); }
+    if (!hostOk(host)) { attempts.push(`socket:${host}`); throw new Error(`network blocked: ${host}`); }
     return real.connect.apply(this, args);
   };
   dns.lookup = function guardedLookup(host, ...rest) {
     // listen() resolves its bind address through lookup. A wildcard bind (the container's GCLAB_BIND=0.0.0.0) is not outbound,
     // and connecting to it is still refused by the socket guard above, so only the lookup is allowed.
-    if (!isLoopbackHost(host) && host !== '0.0.0.0' && host !== '::') {
+    if (!hostOk(host) && host !== '0.0.0.0' && host !== '::') {
       attempts.push(`dns:${host}`);
       const cb = rest.find((r) => typeof r === 'function');
       return cb?.(new Error(`network blocked: ${host}`));
@@ -58,12 +62,12 @@ export function installNetguard() {
     return real.lookup.call(dns, host, ...rest);
   };
   dns.promises.lookup = async function guardedPromiseLookup(host, ...rest) {
-    if (!isLoopbackHost(host) && host !== '0.0.0.0' && host !== '::') { attempts.push(`dns:${host}`); throw new Error(`network blocked: ${host}`); }
+    if (!hostOk(host) && host !== '0.0.0.0' && host !== '::') { attempts.push(`dns:${host}`); throw new Error(`network blocked: ${host}`); }
     return real.plookup.call(dns.promises, host, ...rest);
   };
   // A reverse lookup (getnameinfo) goes to the OS resolver, so a non-loopback address is a way out too (HI-5).
   dns.lookupService = function guardedLookupService(address, port, cb) {
-    if (!isLoopbackHost(address)) {
+    if (!hostOk(address)) {
       attempts.push(`dns-reverse:${address}`);
       const err = new Error(`network blocked: ${address}`);
       if (typeof cb === 'function') return cb(err);
@@ -72,12 +76,12 @@ export function installNetguard() {
     return real.lookupService.call(dns, address, port, cb);
   };
   dns.promises.lookupService = async function guardedPromiseLookupService(address, port) {
-    if (!isLoopbackHost(address)) { attempts.push(`dns-reverse:${address}`); throw new Error(`network blocked: ${address}`); }
+    if (!hostOk(address)) { attempts.push(`dns-reverse:${address}`); throw new Error(`network blocked: ${address}`); }
     return real.plookupService.call(dns.promises, address, port);
   };
   globalThis.fetch = async function guardedFetch(input, init) {
     const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
-    if (!isLoopbackHost(url.hostname)) { attempts.push(`fetch:${url.hostname}`); throw new Error(`network blocked: ${url.hostname}`); }
+    if (!hostOk(url.hostname)) { attempts.push(`fetch:${url.hostname}`); throw new Error(`network blocked: ${url.hostname}`); }
     return real.fetch(input, init);
   };
   // connect(port [, address] [, cb]) fixes the peer; a later send() with no address goes there, so the peer is checked here.
@@ -99,11 +103,17 @@ export function installNetguard() {
   };
   active = {
     attempts,
+    // Real mode's scoped hole: add a host predicate for the duration of one run, remove it after. Returns a restore().
+    addAllowlist(predicate) {
+      extraAllow.add(predicate);
+      return () => extraAllow.delete(predicate);
+    },
     restore() {
       for (const [holder, name, orig] of savedResolvers) holder[name] = orig;
       dns.promises.lookup = real.plookup; dns.lookupService = real.lookupService; dns.promises.lookupService = real.plookupService;
       net.Socket.prototype.connect = real.connect; dns.lookup = real.lookup; globalThis.fetch = real.fetch; dgram.Socket.prototype.send = real.send; dgram.Socket.prototype.connect = real.udpConnect;
       active = null;
+      extraAllow.clear();
     },
   };
   return active;
