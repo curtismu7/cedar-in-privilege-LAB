@@ -13,6 +13,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
+COPY scripts/real-probe-lib.mjs ./scripts/real-probe-lib.mjs
 COPY video/captions.md ./video/captions.md
 COPY --from=build /app/dist ./dist
 USER node
