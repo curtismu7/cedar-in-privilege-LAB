@@ -7,7 +7,7 @@ const BASIS = {
 
 // Three cases, each a few scenarios. Every button runs one scenario against the mock door. A case says where its shape came from
 // (measured, console text or UNVERIFIED) and where its real counterpart runs; the page never says a simulated case was measured.
-export default function ScenarioPicker({ cases, scenarios, active, onSelect, stories, packs, pack, onPack }) {
+export default function ScenarioPicker({ cases, scenarios, active, onSelect, stories, packs, pack, onPack, plain }) {
   const button = (s) => (
     <button
       key={s.id}
@@ -21,10 +21,9 @@ export default function ScenarioPicker({ cases, scenarios, active, onSelect, sto
     </button>
   );
   const basis = active ? BASIS[active.matchesMeasured ? "matches-measured" : "simulated"] : null;
-  return (
-    <section className="card" data-testid="scenario-picker">
-      <h2>The tour: three cases</h2>
-      <p className="hint">Pick a scenario in a case, then press Simulate. Each case is simulated in this page; only case 3 has a result measured on a real tenant.</p>
+  // `plain`: the case list renders without its own card and heading (the Tour tab's numbered section owns them).
+  const body = (
+    <>
       {packs && packs.length > 0 && (
         <label className="pack-control" htmlFor="pack">Story setting{" "}
           <select id="pack" data-testid="pack-select" value={pack || ""} onChange={(e) => onPack && onPack(e.target.value)}>
@@ -59,6 +58,14 @@ export default function ScenarioPicker({ cases, scenarios, active, onSelect, sto
           </p>
         </div>
       )}
+    </>
+  );
+  if (plain) return body;
+  return (
+    <section className="card" data-testid="scenario-picker">
+      <h2>The tour: three cases</h2>
+      <p className="hint">Pick a scenario in a case, then press Simulate. Each case is simulated in this page; only case 3 has a result measured on a real tenant.</p>
+      {body}
     </section>
   );
 }

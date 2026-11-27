@@ -58,6 +58,8 @@ export function createHost({ win = window, doc = document, mode = () => 'mock', 
       });
     },
     prefill() {},
+    // The page's tabs (App.jsx listens for cip:goto): the script's `tab` names the section a step's target lives in.
+    switchTab(tab) { win.dispatchEvent(new CustomEvent("cip:goto", { detail: tab })); },
     send(step) {
       // This lab has no typed question: a step whose prompt names a button clicks it, anything else clicks the step's target (a scenario button).
       const sel = (step.prompt && step.prompt.press) || step.target;
@@ -75,7 +77,7 @@ export const NOT_YET = [];
 /** The script as engine steps. `captions` is /api/story. */
 export function buildSteps({ captions, host, doc = document, win = window, script = STEPS, notYet = NOT_YET }) {
   return script.filter((s) => !notYet.includes(s.key)).map((s) => {
-    const step = { key: s.key, type: s.type, trigger: s.trigger, modes: s.modes, sampleKey: s.sampleKey, prefer: s.prefer, place: s.place, fixedSecs: s.fixedSecs, frameTimeoutMs: s.frameTimeoutMs };
+    const step = { key: s.key, type: s.type, trigger: s.trigger, modes: s.modes, sampleKey: s.sampleKey, prefer: s.prefer, place: s.place, fixedSecs: s.fixedSecs, frameTimeoutMs: s.frameTimeoutMs, tab: s.tab };
     if (s.type === 'bubble') step.target = s.target;
     return step;
   });

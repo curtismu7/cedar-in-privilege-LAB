@@ -17,7 +17,7 @@ beforeAll(() => {
   if (!HTMLElement.prototype.hasPointerCapture) HTMLElement.prototype.hasPointerCapture = () => false;
   if (!HTMLElement.prototype.releasePointerCapture) HTMLElement.prototype.releasePointerCapture = () => {};
 });
-beforeEach(() => setJsonView("raw"));
+beforeEach(() => { setJsonView("raw"); try { history.replaceState(null, "", location.pathname + location.search); } catch { /* no history in some hosts */ } });
 afterEach(() => cleanup());
 
 // The catalog and the runs come from the real server modules, so the page is tested against what the server really answers.
@@ -98,7 +98,7 @@ describe("the page", () => {
     const calls = mockFetch();
     render(<App />);
     const select = await screen.findByTestId("mode-select");
-    await waitFor(() => expect(screen.getByTestId("scenario-picker")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("tour-cases")).toBeTruthy());
     const catalogLoads = () => calls.filter((c) => c.path === "/api/catalog").length;
     const before = catalogLoads();
     fireEvent.change(select, { target: { value: "real" } });
@@ -222,31 +222,41 @@ describe("the page", () => {
   it("the set-up guide shows the eight steps with labelled notes, and the IS / IS NOT panel shows both lists", async () => {
     mockFetch();
     render(<App />);
+    fireEvent.click(within(await screen.findByRole("navigation", { name: "Sections" })).getByText("Set up"));
     const guide = await screen.findByTestId("setup-guide");
     expect(guide.id).toBe("setup");
     expect(within(guide).getAllByRole("listitem").filter((li) => li.dataset.testid?.startsWith("guide-step-"))).toHaveLength(8);
     expect(within(screen.getByTestId("guide-step-4")).getAllByTestId("label").map((n) => n.textContent)).toEqual(["console text", "UNVERIFIED"]);
     expect(within(screen.getByTestId("guide-step-8")).getAllByTestId("label").map((n) => n.textContent)).toEqual(["console text", "measured", "measured", "console text"]);
     expect(screen.getByTestId("guide-step-8").textContent).toMatch(/one observation, not a propagation time/);
-    const panel = screen.getByTestId("is-is-not");
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Sections" })).getByText("Is / Is not"));
+    const panel = await screen.findByTestId("is-is-not");
     expect(panel.id).toBe("is");
-    expect(within(screen.getByTestId("is-list")).getAllByRole("listitem")).toHaveLength(6);
-    expect(within(screen.getByTestId("is-not-list")).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(screen.getByTestId("is-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(6);
+    expect(within(screen.getByTestId("is-not-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(6);
     const labels = within(panel).getAllByTestId("label").map((n) => n.textContent);
     expect(new Set(labels)).toEqual(new Set(["console text", "UNVERIFIED", "measured"]));
     expect(labels.filter((l) => l === "measured")).toHaveLength(1);
   });
 
-  it("the nav marks the section the viewer picked", async () => {
+  it("the nav marks the section the viewer picked, and only the picked section is on the page (tabs, not a scroll-down)", async () => {
     mockFetch();
     render(<App />);
     const nav = within(await screen.findByRole("navigation", { name: "Sections" }));
     expect(nav.getByText("Tour").getAttribute("aria-current")).toBe("page");
+    // The Tour pane is shown; the others are hidden.
+    expect(screen.getByTestId("pane-flow").hidden).toBe(false);
+    expect(screen.getByTestId("pane-setup").hidden).toBe(true);
+    expect(screen.getByTestId("pane-evidence").hidden).toBe(true);
     fireEvent.click(nav.getByText("Set up"));
     expect(nav.getByText("Set up").getAttribute("aria-current")).toBe("page");
     expect(nav.getByText("Tour").getAttribute("aria-current")).toBeNull();
+    expect(screen.getByTestId("pane-setup").hidden).toBe(false);
+    expect(screen.getByTestId("pane-flow").hidden).toBe(true);
     fireEvent.click(nav.getByText("Measured"));
     expect(nav.getByText("Measured").getAttribute("aria-current")).toBe("page");
+    expect(screen.getByTestId("pane-evidence").hidden).toBe(false);
+    expect(screen.getByTestId("pane-setup").hidden).toBe(true);
   });
 
   it("Reset (the TopMenu button) clears the result and tells the server", async () => {

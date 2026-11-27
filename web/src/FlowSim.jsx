@@ -113,7 +113,7 @@ function StepUpPanel({ scenario, onStart, onCancel }) {
   );
 }
 
-export default function FlowSim({ activeScenario, speed, resetKey }) {
+export default function FlowSim({ activeScenario, speed, resetKey, headless }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(studioNodes());
   const [edges, setEdges] = useState(() => studioEdges());
   const [running, setRunning] = useState(false);
@@ -218,10 +218,16 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
     ? result.calls.filter((c) => c.trace).map((c, i) => ({ step: i + 1, title: `Agent calls the door: tools/call ${c.tool} (${c.action})`, status: c.trace.response ? c.trace.response.status : null, trace: c.trace }))
     : [];
 
-  return (
+  const frame = (children) => (headless ? <div data-testid="flow-sim">{children}</div> : (
     <section className="card" data-testid="flow-sim" id="flow">
       <h2>{studio.title}</h2>
       <p className="hint">{studio.lede}</p>
+      {children}
+    </section>
+  ));
+
+  return frame(
+    <>
       <div className="flow-controls">
         <button type="button" className="primary" disabled={running || !activeScenario || (activeScenario && activeScenario.stepUp)} onClick={() => activeScenario && run(activeScenario)}>
           Simulate
@@ -250,6 +256,15 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>
+      <div className="hops-grid" data-testid="diagram-steps">
+        {studio.steps.map((s, i) => (
+          <div className="hop" key={s.title} data-testid={`diagram-step-${i + 1}`}>
+            <h3><span className="step-num" data-n={i + 1} aria-hidden="true" />{s.title}</h3>
+            <p>{s.what}</p>
+            <p className="hint">{s.why}</p>
+          </div>
+        ))}
+      </div>
       {pendingStepUp && !running && (
         <StepUpPanel scenario={pendingStepUp} onStart={(stepUp) => run(pendingStepUp, stepUp)} onCancel={() => setPendingStepUp(null)} />
       )}
@@ -263,6 +278,6 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
         <RunResult result={result} />
       </div>
       <LabTrace exchanges={exchanges} />
-    </section>
+    </>
   );
 }
