@@ -86,7 +86,10 @@ export default function App() {
   useEffect(() => {
     const onHash = () => setSection((s) => fromHash() || s);
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    // Story mode opens a section from the host (storyWiring switchTab): the script's `tab` lands here as a cip:goto event.
+    const onGoto = (e) => { if (e.detail && SECTIONS.includes(e.detail)) setSection(e.detail); };
+    window.addEventListener("cip:goto", onGoto);
+    return () => { window.removeEventListener("hashchange", onHash); window.removeEventListener("cip:goto", onGoto); };
   }, []);
 
   useEffect(() => {
@@ -138,10 +141,14 @@ export default function App() {
           Cedar in Privilege
         </div>
         <nav className="shell-nav" aria-label="Sections">
-          <a href="#flow" aria-current={section === "flow" ? "page" : undefined} onClick={() => setSection("flow")}>Tour</a>
-          <a href="#setup" aria-current={section === "setup" ? "page" : undefined} onClick={() => setSection("setup")}>Set up</a>
-          <a href="#is" aria-current={section === "is" ? "page" : undefined} onClick={() => setSection("is")}>Is / Is not</a>
-          <a href="#evidence" aria-current={section === "evidence" ? "page" : undefined} onClick={() => setSection("evidence")}>Measured</a>
+          {[
+            ["flow", "Tour"],
+            ["setup", "Set up"],
+            ["is", "Is / Is not"],
+            ["evidence", "Measured"]
+          ].map(([id, label]) => (
+            <a key={id} href={`#${id}`} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}>{label}</a>
+          ))}
         </nav>
         <div className="shell-right" ref={modeBox}>
           <TopMenu
@@ -187,22 +194,40 @@ export default function App() {
             <button type="button" onClick={() => setReloadKey((k) => k + 1)}>Retry</button>
           </div>
         )}
-        <section className="card intro" data-testid="intro">
-          <h1>How Cedar AI policies work in PingOne Privilege</h1>
-          <p>Cedar is the policy language Privilege uses for its AI policies. A guided tour of three cases: a call held for a human, a token-scope gate, and an agent act.sub gate. Each is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. Below the tour: how to set Cedar up in the console, and what Cedar is and is not.</p>
-          {data && <p className="hint">{data.mockNote}</p>}
-        </section>
-        {presenter && (
-          <aside className="presenter-say" data-testid="presenter-say" aria-label="Talk track">
-            {presenterSay(activeScenario)}
-          </aside>
-        )}
-        <ScenarioPicker cases={(data && data.cases) || []} scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} stories={data && data.stories} packs={data && data.packs} pack={data && data.pack} onPack={setPack} />
-        <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} />
-        {source === "real" && <RealRunPanel />}
-        <SetupGuide guide={data && data.guide} />
-        <IsIsNot panel={data && data.isIsNot} />
-        <Evidence evidence={data && data.evidence} />
+        {/* Tabs, not a scroll-down page: every section is one pane; only the picked one is on the page (the others are display:none).
+            #flow keeps the intro so the Tour tab stays the landing tab; the hash always names the section itself. */}
+        <div className="tab-panes">
+          <div className="tab-pane" data-testid={`pane-flow`} hidden={section !== "flow"}>
+            <section className="card intro" data-testid="intro">
+              <h1><span className="step-num" data-n="1" aria-hidden="true" />How Cedar AI policies work in PingOne Privilege</h1>
+              <p>Cedar is the policy language Privilege uses for its AI policies. A guided tour of three cases: a call held for a human, a token-scope gate, and an agent act.sub gate. Each is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. The other tabs: how to set Cedar up in the console, and what Cedar is and is not.</p>
+              {data && <p className="hint">{data.mockNote}</p>}
+            </section>
+            {presenter && (
+              <aside className="presenter-say" data-testid="presenter-say" aria-label="Talk track">
+                {presenterSay(activeScenario)}
+              </aside>
+            )}
+            <section className="card tour-section" data-testid="tour-cases">
+              <h2><span className="step-num" data-n="2" aria-hidden="true" />The tour: three cases</h2>
+              <ScenarioPicker cases={(data && data.cases) || []} scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} stories={data && data.stories} packs={data && data.packs} pack={data && data.pack} onPack={setPack} plain />
+            </section>
+            <section className="card tour-section" data-testid="tour-flow">
+              <h2><span className="step-num" data-n="3" aria-hidden="true" />One call, one door, three kinds of Cedar answer</h2>
+              <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} headless />
+            </section>
+            {source === "real" && <RealRunPanel />}
+          </div>
+          <div className="tab-pane" data-testid={`pane-setup`} hidden={section !== "setup"}>
+            <SetupGuide guide={data && data.guide} />
+          </div>
+          <div className="tab-pane" data-testid={`pane-is`} hidden={section !== "is"}>
+            <IsIsNot panel={data && data.isIsNot} />
+          </div>
+          <div className="tab-pane" data-testid={`pane-evidence`} hidden={section !== "evidence"}>
+            <Evidence evidence={data && data.evidence} />
+          </div>
+        </div>
       </main>
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />

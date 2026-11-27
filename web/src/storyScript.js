@@ -39,9 +39,9 @@ export const STEPS = [
   { key: 'actsub_baseline', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('actsub-1-baseline') } },
 
   // ---- the static cards
-  { key: 'setup_guide', type: 'bubble', trigger: 'load', target: `${SETUP} h2`, prefer: 'right' },
-  { key: 'is_is_not', type: 'bubble', trigger: 'load', target: `${ISISNOT} h2`, prefer: 'right' },
-  { key: 'measured', type: 'bubble', trigger: 'load', target: `${EVID} h2`, prefer: 'right' },
+  { key: 'setup_guide', type: 'bubble', trigger: 'load', tab: 'setup', target: `${SETUP} h2`, prefer: 'right' },
+  { key: 'is_is_not', type: 'bubble', trigger: 'load', tab: 'is', target: `${ISISNOT} h2`, prefer: 'right' },
+  { key: 'measured', type: 'bubble', trigger: 'load', tab: 'evidence', target: `${EVID} h2`, prefer: 'right' },
 
   { key: 'closing', type: 'slide', trigger: 'load' },
 ];
