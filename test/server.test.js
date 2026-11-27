@@ -16,7 +16,10 @@ const JWT = /^eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}$/;
 
 async function withServer(fn) {
   const saved = process.env.LAB_ALLOWED_HOSTS;
+  const savedEnv = process.env.REAL_PROBE_ENV;
   process.env.LAB_ALLOWED_HOSTS = "localhost:7820,127.0.0.1:7820";
+  // Tests never depend on the owner's .env: pin the real-mode probe to a path that does not exist.
+  process.env.REAL_PROBE_ENV = "/nonexistent/.env";
   const srv = buildServer().listen(0, "127.0.0.1");
   await new Promise((r) => srv.on("listening", r));
   const base = `http://127.0.0.1:${srv.address().port}`;
@@ -31,6 +34,7 @@ async function withServer(fn) {
   try { await fn(j, base); } finally {
     await stop(srv);
     if (saved === undefined) delete process.env.LAB_ALLOWED_HOSTS; else process.env.LAB_ALLOWED_HOSTS = saved;
+    if (savedEnv === undefined) delete process.env.REAL_PROBE_ENV; else process.env.REAL_PROBE_ENV = savedEnv;
   }
 }
 

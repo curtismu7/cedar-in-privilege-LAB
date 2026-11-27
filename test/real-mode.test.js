@@ -103,7 +103,30 @@ test("no .env: /api/info keeps realAvailable false and /api/mode real answers 40
   } finally { await s.close(); }
 });
 
-test("placeholder .env: refused with a reason naming the problem; no request leaves", async () => {
+test("no .env file but every required key set in the process environment: Real works (compose env_file: .env)", async () => {
+  const { mkdtemp: _m } = await import("node:fs/promises");
+  const dir = await _m(join(tmpdir(), "realmode-"));
+  const f = await fakes();
+  const saved = {};
+  for (const [k, v] of Object.entries({ PF_ISSUER: f.pfUrl, PF_CLIENT_ID: CLIENT_ID, PF_CLIENT_SECRET: SECRET, PF_SCOPE: SCOPE, DOOR_URL: f.doorUrl })) { saved[k] = process.env[k]; process.env[k] = v; }
+  const s = await startServer(join(dir, "absent.env"));
+  try {
+    const info = await get(s.base, "/api/info");
+    assert.equal(info.realAvailable, true);
+    const m = await post(s.base, "/api/mode", { source: "real" });
+    assert.equal(m.status, 200);
+    const run = await post(s.base, "/api/real/run");
+    assert.equal(run.status, 200);
+    assert.equal(run.json.calls[0].verdict, "allowed");
+    const bodies = [JSON.stringify(run.json), JSON.stringify(await get(s.base, "/api/info"))];
+    for (const b of bodies) { assert.ok(!b.includes(SECRET), "secret leaked"); }
+  } finally {
+    await s.close(); await f.close();
+    for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+  }
+});
+
+test("no .env file and no process env: Real stays off (today's contract)", async () => {
   const { mkdtemp: _m } = await import("node:fs/promises");
   const dir = await _m(join(tmpdir(), "realmode-"));
   const f = await fakes();

@@ -15,14 +15,27 @@ import { parseEnv, validateEnv, parseMcpBody, classifyVerdict, isInconclusive, i
 const TIMEOUT_MS = 15000;
 const MAX_BYTES = 256 * 1024;
 
+const REQUIRED_KEYS = ["PF_ISSUER", "PF_CLIENT_ID", "PF_CLIENT_SECRET", "PF_SCOPE", "DOOR_URL"];
+
+// A .env file and a process environment carry the same KEY=VALUE shape: when the file is absent but every required key is set in the
+// process environment (docker compose env_file: .env, the owner's optional supply), use that instead. The same validateEnv gate runs on
+// either source, so a placeholder value is refused wherever it came from.
 export function realModeState(envPath) {
-  if (!existsSync(envPath)) return { available: false, reason: "no .env file" };
-  const check = validateEnv(parseEnv(readFileSync(envPath, "utf8")));
+  if (!existsSync(envPath)) {
+    const fromProcess = {};
+    for (const k of REQUIRED_KEYS) if (String(process.env[k] ?? "").trim()) fromProcess[k] = process.env[k];
+    if (REQUIRED_KEYS.every((k) => fromProcess[k] !== undefined)) return checked(fromProcess, "the process environment (compose env_file)");
+    return { available: false, reason: "no .env file" };
+  }
+  return checked(parseEnv(readFileSync(envPath, "utf8")), ".env");
+}
+
+function checked(env, where) {
+  const check = validateEnv(env);
   if (!check.ok) {
     const why = [...check.missing.length ? [`missing: ${check.missing.join(", ")}`] : [], ...check.problems].join("; ");
     return { available: false, reason: `.env is not usable: ${why}. Edit .env (see .env.example)` };
   }
-  const env = parseEnv(readFileSync(envPath, "utf8"));
   return {
     available: true,
     env,
