@@ -41,7 +41,7 @@ Each visitor's runs are kept under a **workspace id**: `default` unless the requ
 
 ## customer.config (rule 12)
 
-An optional, git-ignored `customer.config.json` beside `package.json` (copy `customer.config.example.json`) sets the organisation name used in the stories (`org`) and the default story setting (`pack`: `banking`, `healthcare` or `retail`). Anything invalid is ignored. It is read by `npm start` and `npm run dev` only: the Docker image does not contain it (`.dockerignore` excludes it, compose mounts nothing and the filesystem is read-only), so a container always starts with no organisation name and the banking setting. The **Story setting** select on the page changes the setting at any time.
+An optional, git-ignored `customer.config.json` beside `package.json` (copy `customer.config.example.json`) sets the organisation name used in the stories (`org`) and the default story setting (`pack`: `airline` (the default), `banking`, `healthcare` or `retail`). Anything invalid is ignored. It is read by `npm start` and `npm run dev` only: the Docker image does not contain it (`.dockerignore` excludes it, compose mounts nothing and the filesystem is read-only), so a container always starts with no organisation name and the banking setting. The **Story setting** select on the page changes the setting at any time.
 
 ## The trace panel's headings
 
