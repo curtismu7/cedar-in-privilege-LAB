@@ -48,7 +48,10 @@ describe("placeholder port and identity", () => {
     expect(serverSrc).toMatch(/PORT_DEFAULT = 7820/);
   });
 
-  it("the container never needs a real outbound: the compose file carries no proxy or credential settings", () => {
-    expect(compose).not.toMatch(/PF_CLIENT_SECRET|PF_ISSUER|DOOR_URL|env_file/);
+  it("the container never hardcodes credentials: no PF_*/DOOR_*/proxy values inline (Real settings come only from the owner's optional .env file)", () => {
+    expect(compose).not.toMatch(/PF_CLIENT_SECRET|PF_ISSUER|DOOR_URL/);
+    // An optional, owner-supplied env_file is allowed (pf-privilege-obo-LAB pattern): compose refuses to start without it,
+    // and Mock mode works with no .env at all.
+    expect(compose).toMatch(/env_file:\s*\n\s*- path: \.env\s*\n\s*required: false/);
   });
 });
