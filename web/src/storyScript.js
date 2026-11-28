@@ -56,6 +56,25 @@ export const STEPS = [
   { key: 'ask_run_approved', type: 'bubble', trigger: 'run-done', target: ASK_PROMPT, prefer: 'right' },
   { key: 'ask_calls', type: 'bubble', trigger: 'load', target: ASK_CALLS, prefer: 'right' },
 
+  // ---- Cases 5 to 9 (more Cedar cases): the same press chain. Each case's intro points at, and presses, its first scenario's button; each run bubble presses the
+  // next scenario (the last bubble of a case presses nothing). The claims case comes first: it is the one that shows what we protect.
+  { key: 'claims_intro', type: 'bubble', trigger: 'load', target: SCEN('claims-1-without'), prefer: 'below', prompt: { press: SCEN('claims-1-without') } },
+  { key: 'claims_run_without', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('claims-2-with') } },
+  { key: 'claims_run_with', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('claims-3-forged') } },
+  { key: 'claims_run_forged', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below' },
+  { key: 'user_intro', type: 'bubble', trigger: 'load', target: SCEN('user-1-other'), prefer: 'below', prompt: { press: SCEN('user-1-other') } },
+  { key: 'user_run_other', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('user-2-right') } },
+  { key: 'user_run_right', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below' },
+  { key: 'group_intro', type: 'bubble', trigger: 'load', target: SCEN('group-1-wrong'), prefer: 'below', prompt: { press: SCEN('group-1-wrong') } },
+  { key: 'group_run_wrong', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('group-3-lookalike') } },
+  { key: 'group_run_lookalike', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below' },
+  { key: 'block_intro', type: 'bubble', trigger: 'load', target: SCEN('block-1-blocked'), prefer: 'below', prompt: { press: SCEN('block-1-blocked') } },
+  { key: 'block_run_blocked', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('block-2-other') } },
+  { key: 'block_run_other', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below' },
+  { key: 'layered_intro', type: 'bubble', trigger: 'load', target: SCEN('layered-1-scope'), prefer: 'below', prompt: { press: SCEN('layered-1-scope') } },
+  { key: 'layered_run_scope', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('layered-4-all') } },
+  { key: 'layered_run_all', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below' },
+
   // ---- the static cards
   { key: 'setup_guide', type: 'bubble', trigger: 'load', tab: 'setup', target: `${SETUP} h2`, prefer: 'right' },
   { key: 'is_is_not', type: 'bubble', trigger: 'load', tab: 'is', target: `${ISISNOT} h2`, prefer: 'right' },

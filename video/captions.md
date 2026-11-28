@@ -192,6 +192,166 @@ Every exchange in order: the token request to the mock PingFederate, then each t
 
 ---
 
+# Step: claims_intro
+
+## Title
+Case 5: the claims we protect
+
+## Text
+A policy on ListIndexTool wants a clearance claim in the token. The claim has to come from the issuer, not from the agent or its words. Simulated; how a real door reads a custom claim from a PingFederate token was not tested (UNVERIFIED).
+
+---
+
+# Step: claims_run_without
+
+## Title
+Run: token without the claim
+
+## Text
+The token has no clearance claim, so the call is refused and the reason names the claim. The prompt said the agent was cleared, but words are not claims. Simulated.
+
+---
+
+# Step: claims_run_with
+
+## Title
+Run: token with the claim
+
+## Text
+The issuer signed clearance into the token, so the same call is served. Same policy, same tool: the claim was the only change. Simulated.
+
+---
+
+# Step: claims_run_forged
+
+## Title
+Run: a claim the agent adds itself
+
+## Text
+The agent edits its own token to add the claim. The signature no longer matches, so the door refuses at sign-in, before any policy is read. A claim only counts when the issuer signed it. Simulated.
+
+---
+
+# Step: user_intro
+
+## Title
+Case 6: the user behind the token
+
+## Text
+The same claim shape on sub, the person the token acts for: the policy names one user. Simulated; how a real door reads the user from a token was not tested (UNVERIFIED).
+
+---
+
+# Step: user_run_other
+
+## Title
+Run: another user's token
+
+## Text
+The token is for a different user, so the call is refused and the reason names the claim and the value. Simulated.
+
+---
+
+# Step: user_run_right
+
+## Title
+Run: the right user
+
+## Text
+The token is for the named user, so the call is served. Same policy, same tool. Simulated.
+
+---
+
+# Step: group_intro
+
+## Title
+Case 7: a group in a list claim
+
+## Text
+A list claim, groups, must contain the required group. A list that holds it is served, one that does not is refused. Simulated; whether a real door compares a list element exactly was not measured (UNVERIFIED).
+
+---
+
+# Step: group_run_wrong
+
+## Title
+Run: wrong group
+
+## Text
+The groups list holds only another group, so the call is refused. Simulated.
+
+---
+
+# Step: group_run_lookalike
+
+## Title
+Run: look-alike group
+
+## Text
+The list holds a group whose name only starts like the required one. The mock compares exactly, so the call is refused. Whether a real door does was not measured (UNVERIFIED).
+
+---
+
+# Step: block_intro
+
+## Title
+Case 8: block a tool outright
+
+## Text
+A forbid with no unless clause refuses the tool for every token: the switch that turns one tool off. Simulated; a policy with no condition was not run on a real door (UNVERIFIED).
+
+---
+
+# Step: block_run_blocked
+
+## Title
+Run: a blocked tool
+
+## Text
+The token carries every scope and claim, and the call is still refused: nothing a token carries satisfies a forbid with no condition. Simulated.
+
+---
+
+# Step: block_run_other
+
+## Title
+Run: another tool, same door
+
+## Text
+The block names ListIndexTool only. CountTool on the same door is served. Simulated.
+
+---
+
+# Step: layered_intro
+
+## Title
+Case 9: layered policies
+
+## Text
+Three policies on one tool: a scope, a claim and a named agent. Every forbid must be satisfied, nothing grants, and the first one not satisfied names the refusal. Simulated; the real engine's order of refusals was not tested (UNVERIFIED).
+
+---
+
+# Step: layered_run_scope
+
+## Title
+Run: scope missing
+
+## Text
+The token lacks the scope, so the scope policy is the first one not satisfied and its reason is the refusal. Simulated.
+
+---
+
+# Step: layered_run_all
+
+## Title
+Run: every policy met
+
+## Text
+The token carries the scope and the claim and names the right agent, so no forbid applies and the call is served. Nothing grants access: an unrefused call is simply allowed. Simulated.
+
+---
+
 # Step: setup_guide
 
 ## Title
