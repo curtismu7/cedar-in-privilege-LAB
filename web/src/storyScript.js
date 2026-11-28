@@ -9,7 +9,6 @@
 // This lab has no Real mode: every step is Mock wording, every run simulated. The measured card is static content, not a run.
 
 const INTRO = '[data-testid=intro]';
-const BANNER = '[data-testid=sim-banner]';
 const SCEN = (id) => `[data-testid=scenario-${id}]`;
 const RESULT = '[data-testid=flow-sim]';
 const SETUP = '[data-testid=setup-guide]';
@@ -22,9 +21,6 @@ const ASK_CALLS = '[data-testid=ask-calls]';
 
 export const STEPS = [
   { key: 'opening', type: 'slide', trigger: 'load' },
-
-  // ---- banner: what is simulated
-  { key: 'banner', type: 'bubble', trigger: 'load', target: BANNER, prefer: 'below' },
 
   // ---- The press prompt belongs to the step BEFORE the run it starts (the pattern of the A2A lab). A step with prompt.press shows its bubble, says "press the
   // highlighted button" to a viewer, and when Play for me's hold ends the engine presses that button; the NEXT step is run-done, so the engine waits for

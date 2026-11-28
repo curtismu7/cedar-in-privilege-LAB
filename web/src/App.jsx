@@ -8,7 +8,7 @@ import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import { HELP_SECTIONS } from "./helpContent.js";
 import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
-import SimulationBanner from "./Banner.jsx";
+import ModeModal from "./ModeModal.jsx";
 import FlowSim from "./FlowSim.jsx";
 import AskAgent from "./AskAgent.jsx";
 import RealRunPanel from "./RealRunPanel.jsx";
@@ -191,7 +191,6 @@ export default function App() {
       </header>
       <div className="accent-rule" aria-hidden="true" />
       <main>
-        <SimulationBanner source={source} />
         {(catalog.error || info.error) && (
           <div className="error-pane" role="alert" data-testid="load-error">
             <span>The page could not load its data: {catalog.error || info.error}.</span>
@@ -237,6 +236,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      <ModeModal source={source} suppress={storyOn} />
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />
 

@@ -56,7 +56,7 @@ test("the README says Tier: Demo, the sibling's identity is not carried over, an
   const readme = readFileSync(join(root, "README.md"), "utf8");
   assert.match(readme, /^Tier: Demo$/m);
   const files = ["README.md", "CLAUDE.md", "package.json", "docker-compose.yml", "Dockerfile", "content-pack.json", "docs/shelf-entry.json", "docs/talk-track.md",
-    "web/src/studio-data/cedar-in-privilege-flow.json", "web/app.css", "web/index.html", "web/src/App.jsx", "web/src/FlowSim.jsx", "web/src/Banner.jsx", "web/src/Evidence.jsx", "web/src/RunResult.jsx",
+    "web/src/studio-data/cedar-in-privilege-flow.json", "web/app.css", "web/index.html", "web/src/App.jsx", "web/src/FlowSim.jsx", "web/src/ModeModal.jsx", "web/src/Evidence.jsx", "web/src/RunResult.jsx",
     "web/src/ScenarioPicker.jsx", "web/src/Guide.jsx", "server/src/index.js", "server/src/cedar.js", "server/src/cedarTrace.js", "server/src/pf.js", "server/src/scenarios.js", "server/src/guide.js",
     "scripts/doctor.mjs", "scripts/reset.mjs", ".github/workflows/ci.yml"];
   // The sibling's own id, name, catalog id and port must not survive as this lab's identity.

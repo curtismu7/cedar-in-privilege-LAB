@@ -31,7 +31,6 @@ SHOTS = Path(os.environ["REHEARSE_SHOTS"]) if os.environ.get("REHEARSE_SHOTS") e
 #   "ask-approve-btn" the approver's button
 WALK = [
     ("opening", "slide", None),
-    ("banner", "bubble", None),
     ("hold_intro", "bubble", "scenario:hold-1-held"), ("hold_run_held", "bubble", "scenario:hold-2-approve"), ("hold_run_approved", "bubble", None),
     ("scope_intro", "bubble", "scenario:scope-1-without"), ("scope_run_without", "bubble", "scenario:scope-2-with"), ("scope_run_with", "bubble", None),
     ("actsub_intro", "bubble", "scenario:actsub-2-gate"), ("actsub_run_gate", "bubble", "scenario:actsub-3-candidate"), ("candidate", "bubble", "scenario:actsub-1-baseline"),
