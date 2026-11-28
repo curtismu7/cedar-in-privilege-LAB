@@ -139,10 +139,10 @@ test("the shelf entry and the pack cards do not say a different agent was refuse
 });
 
 test("the page says plainly the evaluator is not a Cedar engine and decides nothing real, in the mode modal, the help, the pack and the README", () => {
-  for (const file of ["web/src/ModeModal.jsx", "web/src/helpContent.js", "README.md", "server/src/scenarios.js", "content-pack.json"]) {
+  for (const file of ["web/src/App.jsx", "web/src/helpContent.js", "README.md", "server/src/scenarios.js", "content-pack.json"]) {
     assert.match(shown(file), /not a Cedar engine/, file);
   }
-  assert.match(shown("web/src/ModeModal.jsx"), /decides nothing real/);
+  assert.match(shown("web/src/App.jsx"), /decides nothing real/);
   assert.match(shown("server/src/scenarios.js"), /decides nothing real/);
 });
 
