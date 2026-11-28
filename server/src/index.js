@@ -53,20 +53,30 @@ function nextRunId() {
 }
 
 // Rule 4: a mock-issued token is shown raw and labelled mock. It is an HS256 fixture JWT that signs nothing real (pf.js), never a credential.
-function tokenSummary(token) {
+function tokenSummary(token, { edited = false } = {}) {
   if (!token) return null;
   return {
     mock: true,
     token,
     hash: sha8(token),
     claims: pf.decodePayload(token),
-    note: "mock token issued by this lab's in-process PingFederate stand-in (HS256 fixture key, signs nothing real)"
+    ...(edited ? { edited: true } : {}),
+    note: edited
+      ? "mock token that the agent EDITED after this lab's in-process PingFederate stand-in signed it: its signature no longer matches (HS256 fixture key, signs nothing real)"
+      : "mock token issued by this lab's in-process PingFederate stand-in (HS256 fixture key, signs nothing real)"
   };
 }
 
-function mintFor(kind, scope) {
-  if (kind === "none") return null;
-  return pf.mintAgentToken({ agent: AGENT_A, clientId: AGENT_A, audience: DOOR_URL, issuer: ISSUER, actIsText: kind === "act-text", scope });
+// `claims` are what the ISSUER put in the token (see pf.mintAgentToken); with kind "forged" the same claims are added to the payload AFTER signing
+// instead (an agent editing its own token), so the signature no longer matches. `actAgent` is the agent the token's act names (default the token's own).
+function mintFor(kind, scope, claims, actAgent) {
+  if (kind === "none") return { token: null };
+  const base = { agent: actAgent || AGENT_A, clientId: AGENT_A, audience: DOOR_URL, issuer: ISSUER, actIsText: kind === "act-text", scope };
+  if (kind === "forged") {
+    const issued = pf.mintAgentToken(base);   // what the issuer really signed: no extra claim
+    return { token: pf.tamper(issued, claims || {}), issued };
+  }
+  return { token: pf.mintAgentToken({ ...base, claims }) };
 }
 
 // Run one scenario against the mock door. Stateless: the scenario carries the policies the door holds while it runs. A call that is held
@@ -75,7 +85,7 @@ function mintFor(kind, scope) {
 // (stepUp: { factor, otp } — push needs no otp). The step-up is single-use per run: one failure and the approval never records.
 export function runScenario(scenario, trace = startTrace(), stepUp = null) {
   const policies = policiesFor(scenario.policies, scenario.policyState);
-  const token = mintFor(scenario.token, scenario.scope);
+  const { token, issued } = mintFor(scenario.token, scenario.scope, scenario.claims, scenario.actAgent);
   let approvals = 0;
   const calls = scenario.calls.map((step, index) => {
     if (step.approve) {
@@ -125,7 +135,8 @@ export function runScenario(scenario, trace = startTrace(), stepUp = null) {
     door: DOOR,
     traceparent: trace.root,
     policies: policies.map((p) => ({ ...p, cedar: cedarText(p) })),
-    token: tokenSummary(token),
+    token: tokenSummary(token, { edited: Boolean(issued) }),
+    ...(issued ? { issued: tokenSummary(issued) } : {}),
     calls
   };
 }
@@ -146,7 +157,7 @@ export function askAgent({ prompt, scenario, approved = false, stepUp = null }, 
   }
   const exchanges = [];
   if (plan.calls.length && run.token) {
-    exchanges.push({ step: 1, title: "Agent asks the mock PingFederate for a token", status: 200, trace: tokenExchange({ token: run.token, scope: scenario.scope, traceparent: trace.child() }) });
+    exchanges.push({ step: 1, title: "Agent asks the mock PingFederate for a token", status: 200, trace: tokenExchange({ token: run.issued || run.token, scope: scenario.scope, traceparent: trace.child() }) });
   }
   for (const c of run.calls) {
     if (c.trace) exchanges.push({ step: exchanges.length + 1, title: `Agent calls the door: tools/call ${c.tool} (${c.action})`, status: c.trace.response ? c.trace.response.status : null, trace: c.trace });

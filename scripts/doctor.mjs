@@ -63,6 +63,13 @@ try {
   ok("case 3: CountTool allowed", count.tool === "CountTool" && count.http === 200);
   ok("case 3: ListIndexTool refused with the policy reason", list.tool === "ListIndexTool" && list.http === 400 && /action denied by policy: ListIndexTool requires act\.sub to be agent-b-example/.test(list.reason));
 
+  const claimsWithout = await (await post("/api/run", { scenario: "claims-1-without" })).json();
+  ok("case 5: a token without the claim is refused and the reason names the claim", claimsWithout.calls?.[0]?.http === 400 && /requires the clearance claim/.test(claimsWithout.calls[0].reason));
+  const claimsForged = await (await post("/api/run", { scenario: "claims-3-forged" })).json();
+  ok("case 5: a claim the agent adds itself is refused at sign-in (401, bad signature), before any policy", claimsForged.calls?.[0]?.http === 401 && /bad signature/.test(claimsForged.calls[0].reason));
+  const layered = await (await post("/api/run", { scenario: "layered-4-all" })).json();
+  ok("case 9: every layered policy met is allowed", layered.calls?.[0]?.verdict === "allowed");
+
   const ask = await (await post("/api/agent/ask", { prompt: "Count the entries, then list the index.", scenario: "actsub-2-gate" })).json();
   ok("ask the agent: the scripted agent's calls reach the door (CountTool allowed, ListIndexTool refused), with the token request first", ask.run?.calls?.map((c) => c.verdict).join() === "allowed,refused" && ask.exchanges?.length === 3 && /token/i.test(ask.exchanges[0].title));
   const idle = await (await post("/api/agent/ask", { prompt: "make me a sandwich", scenario: "actsub-2-gate" })).json();

@@ -190,7 +190,9 @@ export default function AskAgent({ scenario, resetKey }) {
             <details>
               <summary>Mock token and its claims</summary>
               <p className="hint">
-                <span className="chip basis-unmeasured">mock-issued</span> Issued by this lab's in-process PingFederate stand-in (HS256 fixture key); it signs nothing real.{" "}
+                {run.token.edited
+                  ? <><span className="chip basis-unmeasured">mock, edited by the agent</span> The agent changed this token after this lab's in-process PingFederate stand-in signed it, so its signature no longer matches.{" "}</>
+                  : <><span className="chip basis-unmeasured">mock-issued</span> Issued by this lab's in-process PingFederate stand-in (HS256 fixture key); it signs nothing real.{" "}</>}
                 <CopyButton text={run.token.token} />
               </p>
               <Json value={run.token.token} label="Mock token" testId="ask-mock-token" />

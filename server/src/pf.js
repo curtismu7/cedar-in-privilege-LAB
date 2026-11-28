@@ -37,7 +37,10 @@ export function verify(token) {
 
 // The agent's access token. act is an OBJECT {sub: <agent>} (what the measured PingFederate token carried), or, with
 // actIsText, the TEXT "{}" (what a mapping expression that returns a string produces). withAct false leaves act out.
-export function mintAgentToken({ agent, clientId, audience, issuer, actIsText = false, withAct = true, scope = null }) {
+// `claims` adds issuer-signed claims to the token (a clearance, the user in `sub`, a `groups` list): whatever the scenario sets here the ISSUER put
+// there. The token's own envelope (iss, aud, exp, iat, client_id, mock, scope, act) cannot be set through it.
+const RESERVED = ["iss", "aud", "exp", "iat", "client_id", "mock", "scope", "act"];
+export function mintAgentToken({ agent, clientId, audience, issuer, actIsText = false, withAct = true, scope = null, claims = null }) {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: issuer,
@@ -50,5 +53,18 @@ export function mintAgentToken({ agent, clientId, audience, issuer, actIsText = 
   };
   if (scope) payload.scope = scope;
   if (withAct) payload.act = actIsText ? "{}" : { sub: agent };
+  for (const [k, v] of Object.entries(claims || {})) {
+    if (RESERVED.includes(k) || k === "__proto__") throw new Error(`the claim ${k} is part of the token's own envelope`);
+    payload[k] = v;
+  }
   return sign(payload);
+}
+
+// A token whose payload was edited AFTER the issuer signed it: the extra claims are in the payload, the signature is the old one, so verify()
+// says "bad signature". This is what an agent gets when it adds a claim to its own token.
+export function tamper(token, extra) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) return token;
+  const payload = { ...decodePayload(token), ...extra };
+  return `${parts[0]}.${b64url(JSON.stringify(payload))}.${parts[2]}`;
 }
