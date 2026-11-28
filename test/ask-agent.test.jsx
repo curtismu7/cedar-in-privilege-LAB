@@ -72,6 +72,59 @@ describe("Ask the agent", () => {
     expect(screen.getByTestId("turn-agent-reply").textContent).toMatch(/answered/);
   });
 
+  it("review finding 2: Approve applies to the prompt the answer was for, not to text edited since", async () => {
+    const sent = mockAsk();
+    render(<AskAgent scenario={view("hold-2-approve")} resetKey={0} />);
+    const asked = view("hold-2-approve").prompt;
+    fireEvent.click(screen.getByTestId("ask-send"));
+    await screen.findByTestId("ask-approve");
+    fireEvent.change(screen.getByTestId("ask-prompt"), { target: { value: "count the entries" } });
+    fireEvent.click(screen.getByTestId("ask-approve-btn"));
+    await waitFor(() => expect(sent.length).toBe(2));
+    expect(sent[1].prompt).toBe(asked);
+    expect(sent[1].approved).toBe(true);
+    await waitFor(() => expect(screen.getByTestId("turn-user").textContent).toMatch(/search the index/i));
+  });
+
+  it("review finding 3: a wrong one-time code leaves the approve panel so the right code can be tried", async () => {
+    const sent = mockAsk();
+    render(<AskAgent scenario={view("stepup-1-approve")} resetKey={0} />);
+    fireEvent.click(screen.getByTestId("ask-send"));
+    await screen.findByTestId("ask-approve");
+    fireEvent.click(screen.getByTestId("ask-factor-otp"));
+    fireEvent.change(screen.getByTestId("ask-otp"), { target: { value: "111111" } });
+    fireEvent.click(screen.getByTestId("ask-approve-btn"));
+    await waitFor(() => expect(sent.length).toBe(2));
+    await waitFor(() => expect(screen.getByTestId("turn-approval").textContent).toMatch(/./));
+    expect(screen.getByTestId("ask-approve")).toBeTruthy();
+    fireEvent.change(screen.getByTestId("ask-otp"), { target: { value: "123123" } });
+    fireEvent.click(screen.getByTestId("ask-approve-btn"));
+    await waitFor(() => expect(screen.queryByTestId("ask-approve")).toBeNull());
+    expect(sent[2].stepUp).toEqual({ factor: "otp", otp: "123123" });
+    expect(screen.getByTestId("turn-agent-reply").textContent).toMatch(/answered/);
+  });
+
+  it("review finding 6: Retry after a failed Approve repeats the approval, not a plain run", async () => {
+    const sent = [];
+    let down = true;
+    global.fetch = (path, opts) => {
+      const body = JSON.parse(opts.body);
+      sent.push(body);
+      if (down && body.approved) return Promise.reject(new TypeError("Failed to fetch"));
+      return j(askAgent({ prompt: body.prompt, scenario: SCENARIOS.find((s) => s.id === body.scenario), approved: body.approved === true, stepUp: body.stepUp || null }));
+    };
+    render(<AskAgent scenario={view("hold-2-approve")} resetKey={0} />);
+    fireEvent.click(screen.getByTestId("ask-send"));
+    await screen.findByTestId("ask-approve");
+    fireEvent.click(screen.getByTestId("ask-approve-btn"));
+    await screen.findByTestId("ask-error");
+    down = false;
+    fireEvent.click(screen.getByText("Retry"));
+    await waitFor(() => expect(screen.queryByTestId("ask-approve")).toBeNull());
+    expect(sent.at(-1).approved).toBe(true);
+    expect(screen.getByTestId("turn-agent-reply").textContent).toMatch(/answered/);
+  });
+
   it("a step-up scenario asks for the factor and sends it with the approval", async () => {
     const sent = mockAsk();
     render(<AskAgent scenario={view("stepup-1-approve")} resetKey={0} />);

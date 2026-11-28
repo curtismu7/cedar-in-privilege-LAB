@@ -2,8 +2,10 @@
 // run is reproducible and nothing leaves the machine. What it shows is the part that matters here: the agent's call reaches the door,
 // and the door's policies (not the prompt) decide. Nothing in a prompt can change a policy, a token or a verdict.
 //
-// Words it reads: count / how many / total -> CountTool; list / show all -> ListIndexTool; search / find / look up -> SearchIndexTool;
-// overnight / unattended / nightly / in the background / while I'm away -> the call is unattended (action mcp:InvokeUnattended).
+// Words it reads: count / how many / total -> CountTool; list / show all -> ListIndexTool; search / find / look up -> SearchIndexTool.
+// The prompt only picks tools. The ACTION of a call (attended mcp:Invoke or unattended mcp:InvokeUnattended) belongs to the door setup (the
+// scenario), like its policies and its token: a policy applies to one action, and how the real gateway tells an unattended call apart was
+// not measured, so a typed word never decides it.
 import { ACTION_INVOKE, ACTION_UNATTENDED, AGENT_A, APPROVER, ISSUER, DOOR_URL } from "./cedar.js";
 import { mockTrace } from "./gatewayTrace.js";
 
@@ -15,11 +17,10 @@ const TOOL_WORDS = [
   ["ListIndexTool", /\b(list|show all|show me all|everything)\b/i],
   ["SearchIndexTool", /\b(search|find|look ?up|look for|query)\b/i]
 ];
-const UNATTENDED_WORDS = /\b(overnight|unattended|nightly|in the background|background|while i(?:'m| am) (?:away|asleep)|nobody (?:is )?(?:watching|around)|no one (?:is )?(?:watching|around)|scheduled)\b/i;
 
 export const CAN_DO =
   "I am a scripted agent (no model). I can count (CountTool), list (ListIndexTool) and search (SearchIndexTool) the index. " +
-  "Say overnight, nightly or unattended and I run the call with nobody watching. Try: \"Search the index for open cases.\"";
+  "Try: \"Search the index for open cases.\"";
 
 // A prompt is text, 1 to 280 characters after trimming. Anything else is refused before it is read.
 export function checkPrompt(prompt) {
@@ -30,16 +31,14 @@ export function checkPrompt(prompt) {
   return { ok: true, text };
 }
 
-// The tools the words name, in the order the words appear, once each, at most MAX_CALLS.
-export function planPrompt(text) {
+// The tools the words name, in the order the words appear, once each, at most MAX_CALLS. `action` is the door setup's: every call carries it.
+export function planPrompt(text, action = ACTION_INVOKE) {
   const found = TOOL_WORDS
     .map(([tool, re]) => ({ tool, at: text.search(re) }))
     .filter((t) => t.at >= 0)
     .sort((a, b) => a.at - b.at)
     .slice(0, MAX_CALLS);
-  const unattended = UNATTENDED_WORDS.test(text);
-  const action = unattended ? ACTION_UNATTENDED : ACTION_INVOKE;
-  return { unattended, action, calls: found.map((f) => ({ tool: f.tool, action })) };
+  return { unattended: action === ACTION_UNATTENDED, action, calls: found.map((f) => ({ tool: f.tool, action })) };
 }
 
 const list = (xs) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
@@ -81,7 +80,7 @@ export function transcriptFor({ prompt, plan, run, approved }) {
   const names = plan.calls.map((c) => c.tool);
   turns.push({
     role: "agent", kind: "plan",
-    text: `I will ask for a token, then call ${list(names)}${plan.unattended ? ", unattended (no person watching)" : ""} on the door.`
+    text: `I will ask for a token, then call ${list(names)}${plan.unattended ? ", unattended (no person watching; this door setup runs the agent that way)" : ""} on the door.`
   });
   for (const c of run.calls) {
     if (c.kind === "approval") {
@@ -99,7 +98,7 @@ export function transcriptFor({ prompt, plan, run, approved }) {
   const no = done.filter((c) => c.verdict === "refused");
   const parts = [];
   if (ok.length) parts.push(`${list(ok)} answered (mock reply).`);
-  for (const c of no) parts.push(`The door refused ${c.tool}: ${c.reason.replace(/^JSON-RPC -32600 /, "")}. A refusal is final for this token; I cannot talk my way past a policy.`);
+  for (const c of no) parts.push(`The door refused ${c.tool}: ${c.reason.replace(/^JSON-RPC -32600 /, "")}. A refusal is final for this token and this door setup: my words do not change a policy or a token.`);
   for (const c of held) {
     parts.push(approved
       ? `${c.tool} is still on hold: the approval did not record, so the policy still applies.`

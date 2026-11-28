@@ -57,27 +57,27 @@ export default function AskAgent({ scenario, resetKey }) {
   const [factor, setFactor] = useState("push");
   const [otp, setOtp] = useState("");
   const latest = useRef(0);
+  const lastBody = useRef(null); // the request that is on screen or failed, so Retry repeats exactly it (an Approve stays an Approve)
   const scenarioId = scenario ? scenario.id : null;
 
   // A new door setup starts a new conversation with that setup's suggested prompt; Reset clears it.
   useEffect(() => {
     latest.current += 1;
+    lastBody.current = null;
+    setFactor("push");
+    setOtp("");
     setAnswer(null);
     setError(null);
     setBusy(false);
     setPrompt(scenario && scenario.prompt ? scenario.prompt : "");
   }, [scenarioId, resetKey]);
 
-  const send = async (approved) => {
+  const post = async (body) => {
     if (!scenario || busy) return;
     const mine = ++latest.current;
     setBusy(true);
     setError(null);
-    const body = { prompt, scenario: scenario.id };
-    if (approved) {
-      body.approved = true;
-      if (scenario.stepUp) body.stepUp = factor === "otp" ? { factor, otp } : { factor };
-    }
+    lastBody.current = body;
     const res = await postJson("/api/agent/ask", body);
     if (mine !== latest.current) return;
     setBusy(false);
@@ -86,6 +86,14 @@ export default function AskAgent({ scenario, resetKey }) {
       return;
     }
     setAnswer(res.body);
+  };
+
+  // An approval is for the prompt the shown answer was for, never for text edited since: it sends the answered prompt.
+  const send = (approved) => {
+    if (!approved) return post({ prompt, scenario: scenario.id });
+    const body = { prompt: answer && answer.run && answer.run.prompt ? answer.run.prompt : prompt, scenario: scenario.id, approved: true };
+    if (scenario.stepUp) body.stepUp = factor === "otp" ? { factor, otp } : { factor };
+    return post(body);
   };
 
   const text = prompt.trim();
@@ -97,8 +105,8 @@ export default function AskAgent({ scenario, resetKey }) {
     <div data-testid="ask-agent">
       <p>
         Type what you would ask an AI agent. The agent here is <strong>scripted</strong> (no model, no network): it reads your words, picks tools
-        (<code>count</code>, <code>list</code>, <code>search</code>; add <em>overnight</em> to run unattended) and calls the mock door. The door's
-        policies decide, not the prompt: try asking it to ignore them.
+        (<code>count</code>, <code>list</code>, <code>search</code>) and calls the mock door. The door setup decides the rest (its policies, the token
+        and whether the call is unattended), not the prompt: try asking it to ignore them.
       </p>
       {!scenario && <p className="hint" data-testid="ask-pick-first">Pick a scenario in step 2 first: it sets which policies the door holds. It also fills in a suggested prompt.</p>}
       {scenario && (
@@ -128,7 +136,7 @@ export default function AskAgent({ scenario, resetKey }) {
       {error && (
         <div className="error-pane" role="alert" data-testid="ask-error">
           <span>{error}</span>
-          <button type="button" onClick={() => send(false)} disabled={!canSend}>Retry</button>
+          <button type="button" onClick={() => lastBody.current && post(lastBody.current)} disabled={busy || !lastBody.current}>Retry</button>
         </div>
       )}
       {answer && (

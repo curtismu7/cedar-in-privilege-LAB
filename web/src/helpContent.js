@@ -21,7 +21,7 @@ export const HELP_SECTIONS = [
   {
     heading: "How to use the page",
     body: [
-      "Pick a scenario in one of the three cases, then either press Simulate or type a prompt under Ask the agent. The agent is scripted (no model): it reads count, list or search, and overnight for an unattended call, then calls the mock door. You see the conversation, the Cedar on the door and every API call with its reply; for a held call you play the approver. The diagram boxes can be dragged; Reset in the header restores them. Speed sets how fast the arrows walk.",
+      "Pick a scenario in one of the three cases, then either press Simulate or type a prompt under Ask the agent. The agent is scripted (no model): it reads count, list or search, then calls the mock door; the scenario sets the policies, the token and whether the call is unattended. You see the conversation, the Cedar on the door and every API call with its reply; for a held call you play the approver. The diagram boxes can be dragged; Reset in the header restores them. Speed sets how fast the arrows walk.",
       "Below the tour: Set up shows the eight console steps for creating a Cedar policy, and Is / Is not says what Cedar is and is not. Present (Alt+P) shows the line to say for the scenario you picked. Talk track opens the full script in a dialog you can move, resize or pop out."
     ]
   },

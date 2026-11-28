@@ -132,18 +132,17 @@ export function runScenario(scenario, trace = startTrace(), stepUp = null) {
 
 // "Ask the agent": the scripted agent turns the viewer's prompt into tool calls (agent.js), and the scenario supplies the door setup (its
 // policies, token scope, Active or Candidate, and whether an approval needs the approver's step-up). A first pass finds the calls the door
-// holds; with `approved` the run adds one simulated approval and retries them. The prompt can only choose tools: it never reaches a policy.
+// holds; with `approved` the run adds one simulated approval and retries them. The prompt can only choose tools: the action of the calls
+// (attended or unattended) comes from the scenario's own calls, so no typed word reaches a policy, a token or the action a policy matches.
 export function askAgent({ prompt, scenario, approved = false, stepUp = null }, trace = startTrace()) {
-  const plan = planPrompt(prompt);
-  const base = { ...scenario, calls: plan.calls };
-  let run = runScenario(base, plan.calls.length ? startTrace() : trace, stepUp);
+  const plan = planPrompt(prompt, (scenario.calls.find((c) => c.tool) || {}).action);
+  let run = runScenario({ ...scenario, calls: plan.calls }, trace, stepUp);
   let retried = false;
   const held = run.calls.filter((c) => c.verdict === "held").map((c) => c.tool);
   if (approved && held.length) {
+    // The door is deterministic, so the pass above found exactly the held calls; this pass is the one that is shown.
     run = runScenario({ ...scenario, calls: callsFor(plan, { approved, heldTools: held, stepUp: scenario.stepUp === true }) }, trace, stepUp);
     retried = true;
-  } else if (plan.calls.length) {
-    run = runScenario(base, trace, stepUp);
   }
   const exchanges = [];
   if (plan.calls.length && run.token) {
@@ -152,7 +151,10 @@ export function askAgent({ prompt, scenario, approved = false, stepUp = null }, 
   for (const c of run.calls) {
     if (c.trace) exchanges.push({ step: exchanges.length + 1, title: `Agent calls the door: tools/call ${c.tool} (${c.action})`, status: c.trace.response ? c.trace.response.status : null, trace: c.trace });
   }
-  const awaitingApproval = !retried && held.length > 0;
+  // Waiting for a person: held and not yet approved, or an approval that did not record (a wrong code) so the person may try again.
+  // The scenario that IS the failed-step-up demo never offers a second try: its hold stands.
+  const approvalFailed = retried && run.calls.some((c) => c.kind === "approval" && !c.ok);
+  const awaitingApproval = held.length > 0 && (!retried || (approvalFailed && scenario.stepUpFails !== true));
   return {
     run: { ...run, prompt },
     plan: { tools: plan.calls.map((c) => c.tool), action: plan.action, unattended: plan.unattended },
