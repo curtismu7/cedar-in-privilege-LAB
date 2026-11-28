@@ -78,10 +78,15 @@ with sync_playwright() as p:
     page.goto(APP + "/")
     # While a person "types" and presses a button the Story bubble steps aside, so the film shows the hands, then the bubble comes back with the result.
     page.add_style_tag(content="html.take-quiet .story-bub, html.take-quiet .story-hl, html.take-quiet .story-tail { visibility: hidden !important; }")
+    # The app header (the dark bar with the title and the sections) stays on screen for the whole film: the page scrolls a long way, and a viewer who
+    # joins part-way should still see which demo this is. Sticky, with the scroll padding of its height so a target scrolled into view clears it.
+    page.add_style_tag(content="header.shell-bar { position: sticky !important; top: 0; z-index: 100; }")
     page.wait_for_selector("[data-testid=story-toggle-story]")
     page.click("[data-testid=story-toggle-story]")
     page.wait_for_selector("[data-testid=story-bar]")
     page.wait_for_selector(".story-slide", state="visible")
+    head_h = page.evaluate("Math.ceil(document.querySelector('header.shell-bar').getBoundingClientRect().height)")
+    page.add_style_tag(content=f"html {{ scroll-padding-top: {head_h + 8}px; }}")
     lead_in = max(0.0, time.time() - t_page - 0.3)   # trimmed off the front of the film below
     page.wait_for_timeout(2000)
     log("sample recording started" if not REHEARSE else "rehearsal started")
@@ -107,7 +112,11 @@ with sync_playwright() as p:
                 page.screenshot(path=str(SHOTS / f"{key}.png"))
             if press:   # what Play for me does when the hold ends: press the button the step names, then the next step waits for the run
                 if press.startswith("scenario:"):
-                    btn = page.locator(f"[data-testid=scenario-{press.split(':', 1)[1]}]")
+                    scen_id = press.split(":", 1)[1]
+                    case_id = page.evaluate("(id) => document.querySelector(`[data-testid=scenario-${id}]`).closest('[data-case]').getAttribute('data-case')", scen_id)
+                    page.select_option("[data-testid=case-select]", case_id)   # one case shows at a time: pick it from the Case list first
+                    settle(600)
+                    btn = page.locator(f"[data-testid=scenario-{scen_id}]")
                     btn.scroll_into_view_if_needed()
                     btn.click()
                     page.wait_for_selector("[data-testid=run-status]:not(:has-text('Running the walk'))", timeout=30000)

@@ -81,6 +81,18 @@ export function buildSteps({ captions, host, doc = document, win = window, scrip
     // The press prompt (a button Play for me presses, and a viewer is told to press): the engine takes its run marker from the step that carries it.
     if (s.prompt) step.prompt = s.prompt;
     if (s.type === 'bubble') step.target = s.target;
+    // A bubble that points at a scenario button first shows that button's case (the case picker shows one case at a time).
+    if (s.type === 'bubble' && /scenario-[a-z0-9-]+/.test(String(s.target || ''))) {
+      step.before = async () => {
+        const el = doc.querySelector(s.target);
+        const c = el && el.closest('[data-case]');
+        if (c) win.dispatchEvent(new CustomEvent('cip:case', { detail: c.getAttribute('data-case') }));
+        await host._sleep(150);
+        // Bring the Case list to the top so the viewer sees which case this is and its text, not only the button.
+        const pick = doc.querySelector('[data-testid=case-select]');
+        if (pick && pick.scrollIntoView) pick.scrollIntoView({ block: 'start' });
+      };
+    }
     return step;
   });
 }

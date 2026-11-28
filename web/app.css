@@ -12,6 +12,11 @@
 
 .shell-brand  { font-weight: 700; }
 
+/* The case picker: one case shows at a time; the dropdown sits above it. */
+.case-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; font-weight: 600; }
+.case-control select { font: inherit; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-body); max-width: 100%; }
+.case[hidden] { display: none; }
+
 .accent-rule {
   height: 3px;
   background: var(--accent-gradient);

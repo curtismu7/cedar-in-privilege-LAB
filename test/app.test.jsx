@@ -58,7 +58,13 @@ function mockFetch({ fail = () => undefined } = {}) {
   };
   return calls;
 }
-const pick = async (name) => fireEvent.click(await screen.findByRole("button", { name }));
+// One case shows at a time: pick() shows the scenario's case first, as a person would from the Case list.
+const pick = async (name) => {
+  const btn = await screen.findByRole("button", { name, hidden: true });
+  const host = btn.closest("[data-case]");
+  if (host && host.hidden) fireEvent.change(screen.getByTestId("case-select"), { target: { value: host.getAttribute("data-case") } });
+  fireEvent.click(btn);
+};
 const ran = () => waitFor(() => expect(screen.getByTestId("run-result")).toBeTruthy(), { timeout: 8000 });
 
 describe("the page", () => {
@@ -122,11 +128,11 @@ describe("the page", () => {
     expect(document.documentElement.dataset.theme).toBeUndefined();
   });
 
-  it("lists the three cases in order, each with its scenarios, its source label and where its real counterpart runs", async () => {
+  it("lists the cases in order, each with its scenarios, its source label and where its real counterpart runs", async () => {
     mockFetch();
     render(<App />);
     await screen.findByRole("button", { name: "Hold: no approval yet" });
-    const names = (id) => within(screen.getByTestId(`scenarios-${id}`)).getAllByRole("button").map((b) => b.textContent);
+    const names = (id) => within(screen.getByTestId(`scenarios-${id}`)).getAllByRole("button", { hidden: true }).map((b) => b.textContent);
     expect(names("hold")).toEqual(["Hold: no approval yet", "Hold, approve, retry"]);
     expect(names("scope")).toEqual(["Token without the scope", "Token with the scope"]);
     expect(names("actsub")).toEqual(["No policy: baseline", "Two policies, same token", "Candidate state"]);
@@ -275,7 +281,7 @@ describe("the page", () => {
     render(<App />);
     fireEvent.click(await screen.findByTestId("presenter"));
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/Start with case 1/);
-    fireEvent.click(await screen.findByRole("button", { name: "Two policies, same token" }));
+    await pick("Two policies, same token");
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/names a different value the call is refused/);
     expect(screen.getByTestId("sim-banner")).toBeTruthy();
   });
@@ -411,6 +417,29 @@ describe("Evidence", () => {
 describe("ScenarioPicker", () => {
   const scenarios = catalog().scenarios;
   const pickerFor = (active) => render(<ScenarioPicker cases={CASES} scenarios={scenarios} active={active} onSelect={() => {}} />);
+  it("shows ONE case at a time from the Case list; the active scenario and the Story's cip:case event follow it", async () => {
+    const { act } = await import("@testing-library/react");
+    const visible = () => [...document.querySelectorAll("[data-case]")].filter((e) => !e.hidden).map((e) => e.getAttribute("data-case"));
+    const { rerender } = render(<ScenarioPicker cases={CASES} scenarios={scenarios} active={null} onSelect={() => {}} />);
+    expect(visible()).toEqual([CASES[0].id]);
+    const select = screen.getByTestId("case-select");
+    expect([...select.options].map((o) => o.textContent)).toEqual(CASES.map((c) => `${c.n}. ${c.title}`));
+    fireEvent.change(select, { target: { value: "actsub" } });
+    expect(visible()).toEqual(["actsub"]);
+    expect(select.value).toBe("actsub");
+    // The active scenario's details show only under its own case.
+    expect(screen.queryByTestId("scenario-about")).toBeNull();
+    // The other cases stay in the page (hidden), so a scenario button anywhere can still be pressed.
+    expect(screen.getByTestId("scenario-hold-1-held")).toBeTruthy();
+    // A scenario becoming active shows its case.
+    rerender(<ScenarioPicker cases={CASES} scenarios={scenarios} active={scenarios.find((s) => s.id === "scope-1-without")} onSelect={() => {}} />);
+    expect(visible()).toEqual(["scope"]);
+    // The Story asks for a case.
+    act(() => { window.dispatchEvent(new CustomEvent("cip:case", { detail: "hold" })); });
+    expect(visible()).toEqual(["hold"]);
+    expect(screen.getByTestId("case-select").value).toBe("hold");
+  });
+
   it("marks the pressed scenario and says it is simulated, not measured, for a hold or scope scenario", () => {
     pickerFor(scenarios.find((s) => s.id === "hold-2-approve"));
     expect(screen.getByRole("button", { name: "Hold, approve, retry" }).getAttribute("aria-pressed")).toBe("true");

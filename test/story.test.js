@@ -47,7 +47,7 @@ test('story (rule 29): the first page the viewer sees has a header naming the de
   assert.equal(first.type, 'slide', 'the first page is a slide');
   const slide = first.key === 'opening' ? captions.opening : captions.slides[first.key];
   assert.ok(slide && slide.header && slide.header.length > 3, `"${first.key}" has a header`);
-  assert.equal(captions.opening.header, 'Cedar in PingOne Privilege: three cases, one measured');
+  assert.equal(captions.opening.header, 'Cedar in PingOne Privilege: nine cases, one measured');
 });
 
 test('story: every step is well formed (a known trigger and type, a run-done step targets the page, no twin keys)', () => {

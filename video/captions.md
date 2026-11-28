@@ -19,16 +19,16 @@
 # Opening Slide
 
 ## Header
-Cedar in PingOne Privilege: three cases, one measured
+Cedar in PingOne Privilege: nine cases, one measured
 
 ## Title
-Cedar in PingOne Privilege: three cases, one measured
+Cedar in PingOne Privilege: nine cases, one measured
 
 ## Lead
 Cedar is the rule engine inside the Privilege gateway: it can refuse a call, hold it for a human, or let it through.
 
 ## Column A: This walk
-- Three cases, simulated
+- Nine cases, simulated
 - One measured on a real tenant
 - Every claim labelled
 
@@ -38,7 +38,7 @@ Cedar is the rule engine inside the Privilege gateway: it can refuse a call, hol
 - Allow, refuse or hold
 
 ## Verdict
-Every run on this page is simulated; the mock door evaluates three rule shapes and decides nothing real.
+Every run on this page is simulated; the mock door evaluates five rule shapes and decides nothing real.
 
 ---
 
@@ -48,7 +48,7 @@ Every run on this page is simulated; the mock door evaluates three rule shapes a
 What is simulated here
 
 ## Text
-The runs use a mock token and a mock door. The door evaluates three rule shapes; it is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant.
+The runs use a mock token and a mock door. The door evaluates five rule shapes; it is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant.
 
 ---
 
@@ -388,7 +388,7 @@ This part is not a mock run: it is what happened on a real tenant on 2026-11-16,
 Where to go next
 
 ## Lead
-Three cases walked, one measured. The measured run's own lab is cedar-act-sub-LAB.
+Nine cases walked, one measured. The measured run's own lab is cedar-act-sub-LAB.
 
 ## Column A: Try next
 - Run the step-up case
