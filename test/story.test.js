@@ -33,7 +33,7 @@ test('story: the parity check really fails when the wording and the script drift
 });
 
 test('story: the script walks the talk track in order, all bubbles Mock (this lab has no Real mode)', () => {
-  const order = ['banner', 'hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'ask_intro', 'ask_run_held', 'ask_run_approved', 'ask_calls', 'setup_guide', 'is_is_not', 'measured'];
+  const order = ['banner', 'hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'ask_intro', 'ask_run_held', 'ask_run_approved', 'ask_calls', 'claims_intro', 'claims_run_without', 'claims_run_with', 'claims_run_forged', 'user_intro', 'user_run_other', 'user_run_right', 'group_intro', 'group_run_wrong', 'group_run_lookalike', 'block_intro', 'block_run_blocked', 'block_run_other', 'layered_intro', 'layered_run_scope', 'layered_run_all', 'setup_guide', 'is_is_not', 'measured'];
   assert.deepEqual(steps.filter((s) => s.type === 'bubble' && !STORY_ONLY.includes(s.key)).map((s) => s.key), order);
   assert.deepEqual(steps.filter((s) => s.modes?.includes('real')).map((s) => s.key), [], 'no Real-only steps: the lab is Mock-only');
   for (const s of steps.filter((s) => s.type === 'bubble')) {
@@ -68,11 +68,16 @@ test('story: the button a run needs is pressed by the step BEFORE it (the engine
     scope_run_without: 'scope-1-without', scope_run_with: 'scope-2-with',
     actsub_run_gate: 'actsub-2-gate', candidate: 'actsub-3-candidate', actsub_baseline: 'actsub-1-baseline',
     ask_intro: 'hold-2-approve',
+    claims_run_without: 'claims-1-without', claims_run_with: 'claims-2-with', claims_run_forged: 'claims-3-forged',
+    user_run_other: 'user-1-other', user_run_right: 'user-2-right',
+    group_run_wrong: 'group-1-wrong', group_run_lookalike: 'group-3-lookalike',
+    block_run_blocked: 'block-1-blocked', block_run_other: 'block-2-other',
+    layered_run_scope: 'layered-1-scope', layered_run_all: 'layered-4-all',
   };
   const keys = steps.map((s) => s.key);
   const byKey = Object.fromEntries(steps.map((s) => [s.key, s]));
   // A case's first run is pressed by the case's intro bubble (which points at that very button); every later run by the run before it.
-  const firstRuns = { hold_run_held: 'hold_intro', scope_run_without: 'scope_intro', actsub_run_gate: 'actsub_intro' };
+  const firstRuns = { hold_run_held: 'hold_intro', scope_run_without: 'scope_intro', actsub_run_gate: 'actsub_intro', claims_run_without: 'claims_intro', user_run_other: 'user_intro', group_run_wrong: 'group_intro', block_run_blocked: 'block_intro', layered_run_scope: 'layered_intro' };
   for (const [step, scen] of Object.entries(runs)) {
     if (firstRuns[step]) continue;
     const before = steps[keys.indexOf(step) - 1];
@@ -86,6 +91,16 @@ test('story: the button a run needs is pressed by the step BEFORE it (the engine
   for (const s of steps.filter((x) => x.trigger === 'run-done')) assert.ok(s.target, `${s.key} has a target`);
   // A press names a button; a step never presses what it points the viewer at unless that is the button (the intro bubbles).
   for (const s of steps.filter((x) => x.prompt)) assert.ok(s.prompt.press, `${s.key}: the prompt is a press`);
+});
+
+test('story: every scenario button a step presses exists in the catalog (a renamed scenario fails here, not in a recording)', async () => {
+  const { SCENARIOS } = await import('../server/src/scenarios.js');
+  const ids = new Set(SCENARIOS.map((x) => x.id));
+  for (const s of steps.filter((x) => x.prompt)) {
+    const m = /scenario-([a-z0-9-]+)\]/.exec(s.prompt.press);
+    if (m) assert.ok(ids.has(m[1]), `${s.key} presses scenario ${m[1]}, which exists`);
+    if (s.target && s.target !== '[data-testid=flow-sim]') { const t = /scenario-([a-z0-9-]+)\]/.exec(s.target); if (t) assert.ok(ids.has(t[1]), `${s.key} points at scenario ${t[1]}`); }
+  }
 });
 
 test('story: captions.md and the script are public-safe (no internal host, tenant id, key or screenshot data)', () => {
