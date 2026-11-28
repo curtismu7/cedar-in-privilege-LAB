@@ -15,6 +15,10 @@ const RESULT = '[data-testid=flow-sim]';
 const SETUP = '[data-testid=setup-guide]';
 const ISISNOT = '[data-testid=is-is-not]';
 const EVID = '[data-testid=evidence]';
+const ASK_PROMPT = '[data-testid=ask-prompt]';
+const ASK_SEND = '[data-testid=ask-send]';
+const ASK_APPROVE = '[data-testid=ask-approve-btn]';
+const ASK_CALLS = '[data-testid=ask-calls]';
 
 export const STEPS = [
   { key: 'opening', type: 'slide', trigger: 'load' },
@@ -37,6 +41,17 @@ export const STEPS = [
   { key: 'actsub_run_gate', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('actsub-2-gate') } },
   { key: 'candidate', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('actsub-3-candidate') } },
   { key: 'actsub_baseline', type: 'bubble', trigger: 'run-done', target: RESULT, prefer: 'below', prompt: { press: SCEN('actsub-1-baseline') } },
+
+  // ---- Ask the agent (Tour step 3): the same hold case, now typed to a scripted agent. ask_intro presses the case button (it sets the door's policies and the
+  // suggested prompt); the next two press the page's own Send and Approve buttons; ask_calls points at the API calls panel.
+  // Only ask_intro is run-done: its target is always on the page. The others are `load` steps: a run-done step waits for a run through the engine's marker,
+  // which a step without a target on the page cannot use (the answer panel only exists after Send). The three bubbles about the prompt box and its answer
+  // all point at the prompt box, which never moves, so the bubble stays put while the answer grows below it; the API calls bubble points at its panel, and a
+  // load step whose target is not there (nothing asked yet) is skipped.
+  { key: 'ask_intro', type: 'bubble', trigger: 'run-done', target: ASK_PROMPT, prefer: 'right', prompt: { press: SCEN('hold-2-approve') } },
+  { key: 'ask_run_held', type: 'bubble', trigger: 'load', target: ASK_PROMPT, prefer: 'right', prompt: { press: ASK_SEND } },
+  { key: 'ask_run_approved', type: 'bubble', trigger: 'load', target: ASK_PROMPT, prefer: 'right', prompt: { press: ASK_APPROVE } },
+  { key: 'ask_calls', type: 'bubble', trigger: 'load', target: ASK_CALLS, prefer: 'right' },
 
   // ---- the static cards
   { key: 'setup_guide', type: 'bubble', trigger: 'load', tab: 'setup', target: `${SETUP} h2`, prefer: 'right' },

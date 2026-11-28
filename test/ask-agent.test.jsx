@@ -125,6 +125,22 @@ describe("Ask the agent", () => {
     expect(screen.getByTestId("turn-agent-reply").textContent).toMatch(/answered/);
   });
 
+  it("Story hook: each ask announces cip:run-start then cip:run-end (ok), also for a held call; a failed request ends with ok:false", async () => {
+    const seen = [];
+    const rec = (e) => seen.push([e.type, e.detail ? e.detail.ok : null]);
+    window.addEventListener("cip:run-start", rec); window.addEventListener("cip:run-end", rec);
+    mockAsk();
+    render(<AskAgent scenario={view("hold-2-approve")} resetKey={0} />);
+    fireEvent.click(screen.getByTestId("ask-send"));
+    await screen.findByTestId("ask-approve");
+    expect(seen).toEqual([["cip:run-start", null], ["cip:run-end", true]]);
+    global.fetch = () => Promise.reject(new TypeError("Failed to fetch"));
+    fireEvent.click(screen.getByTestId("ask-approve-btn"));
+    await screen.findByTestId("ask-error");
+    expect(seen.slice(2)).toEqual([["cip:run-start", null], ["cip:run-end", false]]);
+    window.removeEventListener("cip:run-start", rec); window.removeEventListener("cip:run-end", rec);
+  });
+
   it("a step-up scenario asks for the factor and sends it with the approval", async () => {
     const sent = mockAsk();
     render(<AskAgent scenario={view("stepup-1-approve")} resetKey={0} />);
