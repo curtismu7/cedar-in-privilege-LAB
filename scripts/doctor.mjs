@@ -42,7 +42,7 @@ try {
   ok("an unknown API route is a JSON error, not an HTML page", missing.status === 404 && missingBody?.error === "not_found" && typeof missingBody?.message === "string");
 
   const info = await (await fetch(`${base}/api/info`)).json();
-  ok("info reports mock, Real unavailable with a reason", info.source === "mock" && info.realAvailable === false && /npm run real/.test(info.realReason) && /cedar-act-sub-LAB/.test(info.realReason));
+  ok("info reports mock, Real unavailable with a reason", info.source === "mock" && info.realAvailable === false && /local \.env/.test(info.realReason) && /Docker standalone/.test(info.realReason));
 
   const run = async (scenario) => (await post("/api/run", { scenario })).json();
   const held = await run("hold-1-held");
