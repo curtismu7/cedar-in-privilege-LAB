@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Json from "./components/JsonPane.jsx";
 import LabTrace from "./LabTrace.jsx";
 import { PolicyList, CopyButton } from "./RunResult.jsx";
@@ -88,7 +89,7 @@ export default function AskAgent({ scenario, resetKey }) {
       window.dispatchEvent(new CustomEvent("cip:run-end", { detail: { ok: false } }));
       return;
     }
-    setAnswer(res.body);
+    flushSync(() => setAnswer(res.body));   // the answer is on the page before the Story is told the run ended (a step may point at it)
     window.dispatchEvent(new CustomEvent("cip:run-end", { detail: { ok: true } }));
   };
 
