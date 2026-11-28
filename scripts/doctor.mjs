@@ -63,6 +63,11 @@ try {
   ok("case 3: CountTool allowed", count.tool === "CountTool" && count.http === 200);
   ok("case 3: ListIndexTool refused with the policy reason", list.tool === "ListIndexTool" && list.http === 400 && /action denied by policy: ListIndexTool requires act\.sub to be agent-b-example/.test(list.reason));
 
+  const ask = await (await post("/api/agent/ask", { prompt: "Count the entries, then list the index.", scenario: "actsub-2-gate" })).json();
+  ok("ask the agent: the scripted agent's calls reach the door (CountTool allowed, ListIndexTool refused), with the token request first", ask.run?.calls?.map((c) => c.verdict).join() === "allowed,refused" && ask.exchanges?.length === 3 && /token/i.test(ask.exchanges[0].title));
+  const idle = await (await post("/api/agent/ask", { prompt: "make me a sandwich", scenario: "actsub-2-gate" })).json();
+  ok("ask the agent: a prompt with no tool word makes no call", idle.run?.calls?.length === 0 && idle.exchanges?.length === 0);
+
   const real = await post("/api/mode", { source: "real" });
   ok("real mode refused 409", real.status === 409);
 

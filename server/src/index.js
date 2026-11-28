@@ -16,6 +16,7 @@ import { SCENARIOS, CASES, EVIDENCE, MOCK_NOTE, policiesFor } from "./scenarios.
 import { GUIDE, IS_IS_NOT } from "./guide.js";
 import { PACKS, storiesFor, packList } from "./stories.js";
 import { loadCustomerConfig } from "./customer.js";
+import { checkPrompt, planPrompt, callsFor, tokenExchange, transcriptFor } from "./agent.js";
 
 const APP_ID = "cedar-in-privilege-lab";
 const PORT_DEFAULT = 7820; // provisional: the next free port when this lab was built; the shelf registry has the final say
@@ -126,6 +127,41 @@ export function runScenario(scenario, trace = startTrace(), stepUp = null) {
     policies: policies.map((p) => ({ ...p, cedar: cedarText(p) })),
     token: tokenSummary(token),
     calls
+  };
+}
+
+// "Ask the agent": the scripted agent turns the viewer's prompt into tool calls (agent.js), and the scenario supplies the door setup (its
+// policies, token scope, Active or Candidate, and whether an approval needs the approver's step-up). A first pass finds the calls the door
+// holds; with `approved` the run adds one simulated approval and retries them. The prompt can only choose tools: the action of the calls
+// (attended or unattended) comes from the scenario's own calls, so no typed word reaches a policy, a token or the action a policy matches.
+export function askAgent({ prompt, scenario, approved = false, stepUp = null }, trace = startTrace()) {
+  const plan = planPrompt(prompt, (scenario.calls.find((c) => c.tool) || {}).action);
+  let run = runScenario({ ...scenario, calls: plan.calls }, trace, stepUp);
+  let retried = false;
+  const held = run.calls.filter((c) => c.verdict === "held").map((c) => c.tool);
+  if (approved && held.length) {
+    // The door is deterministic, so the pass above found exactly the held calls; this pass is the one that is shown.
+    run = runScenario({ ...scenario, calls: callsFor(plan, { approved, heldTools: held, stepUp: scenario.stepUp === true }) }, trace, stepUp);
+    retried = true;
+  }
+  const exchanges = [];
+  if (plan.calls.length && run.token) {
+    exchanges.push({ step: 1, title: "Agent asks the mock PingFederate for a token", status: 200, trace: tokenExchange({ token: run.token, scope: scenario.scope, traceparent: trace.child() }) });
+  }
+  for (const c of run.calls) {
+    if (c.trace) exchanges.push({ step: exchanges.length + 1, title: `Agent calls the door: tools/call ${c.tool} (${c.action})`, status: c.trace.response ? c.trace.response.status : null, trace: c.trace });
+  }
+  // Waiting for a person: held and not yet approved, or an approval that did not record (a wrong code) so the person may try again.
+  // The scenario that IS the failed-step-up demo never offers a second try: its hold stands.
+  const approvalFailed = retried && run.calls.some((c) => c.kind === "approval" && !c.ok);
+  const awaitingApproval = held.length > 0 && (!retried || (approvalFailed && scenario.stepUpFails !== true));
+  return {
+    run: { ...run, prompt },
+    plan: { tools: plan.calls.map((c) => c.tool), action: plan.action, unattended: plan.unattended },
+    transcript: transcriptFor({ prompt, plan, run, approved: retried }),
+    exchanges,
+    awaitingApproval,
+    stepUp: scenario.stepUp === true
   };
 }
 
@@ -269,6 +305,21 @@ export function buildServer({ netguard, customer = loadCustomerConfig(), realEnv
     const run = runScenario(found, req.trace, stepUp);
     recordRun(req.workspace, run);
     res.json(run);
+  });
+
+  // Ask the agent: { prompt, scenario } and optionally { approved: true, stepUp } to approve the held call and let the agent retry.
+  app.post("/api/agent/ask", (req, res) => {
+    const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : null;
+    const extra = body ? Object.keys(body).filter((k) => !["prompt", "scenario", "approved", "stepUp"].includes(k)) : [];
+    if (!body || extra.length) return res.status(400).json({ error: "bad_request", message: "body must be {prompt, scenario} with optional approved and stepUp" });
+    const checked = checkPrompt(body.prompt);
+    if (!checked.ok) return res.status(400).json({ error: "bad_prompt", message: checked.message });
+    const found = SCENARIOS.find((s) => s.id === body.scenario);
+    if (!found) return res.status(400).json({ error: "unknown_scenario", message: `unknown scenario; one of ${SCENARIOS.map((s) => s.id).join(", ")}` });
+    if (body.approved !== undefined && typeof body.approved !== "boolean") return res.status(400).json({ error: "bad_request", message: "approved must be true or false" });
+    const answer = askAgent({ prompt: checked.text, scenario: found, approved: body.approved === true, stepUp: body.stepUp || null }, req.trace);
+    recordRun(req.workspace, answer.run);
+    res.json(answer);
   });
 
   // The step-up factors the mock PingID gate offers, and the demo OTP (a labelled demo bypass, never a real credential).

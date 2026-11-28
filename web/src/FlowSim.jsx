@@ -9,11 +9,11 @@ import RunResult from "./RunResult.jsx";
 // The mock PingID step-up gate (rule 24 class of honesty: mock, labelled). The factor picker + push/OTP verification live here; the
 // server decides (verifyStepUp). The demo OTP is a labelled bypass. The measured real counterpart is 2026-11-18: enrolment at sign-in
 // and a full password → push → approve → code chain; the composition with a real Privilege hold is simulated.
-const FACTORS = [
+export const FACTORS = [
   { id: "push", label: "Mobile push" },
   { id: "otp", label: "One-time code" }
 ];
-const DEMO_OTP = "123123";
+export const DEMO_OTP = "123123";
 
 // Studio diagram (rule 17, partly met: the flow is lab-local, see diagram-data.js): the nodes and edges come from the diagram-studio/1
 // data, looked up by name, never hand-built here.

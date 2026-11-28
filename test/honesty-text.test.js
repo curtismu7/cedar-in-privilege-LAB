@@ -14,7 +14,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const shown = (p) => (/\.jsx?$/.test(p) ? read(p).replace(/\/\*[\s\S]*?\*\//g, "").split("\n").filter((l) => !l.trim().startsWith("//")).join("\n") : read(p));
 const FILES = [
   "README.md", "CLAUDE.md", "docs/talk-track.md", "docs/shelf-entry.json", "content-pack.json", "web/src/studio-data/cedar-in-privilege-flow.json",
-  "server/src/scenarios.js", "server/src/guide.js", "server/src/index.js",
+  "server/src/scenarios.js", "server/src/guide.js", "server/src/index.js", "server/src/agent.js",
   ...readdirSync(join(root, "web/src")).filter((f) => /\.jsx?$/.test(f)).map((f) => `web/src/${f}`)
 ];
 

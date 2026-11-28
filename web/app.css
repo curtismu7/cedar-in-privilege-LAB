@@ -461,3 +461,64 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Ask the agent: the conversation, one turn per row. Theme tokens only. */
+.ask-form {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ask-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+
+.chat {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.turn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  overflow-wrap: anywhere;
+}
+
+.turn p {
+  margin: 4px 0;
+}
+
+.turn-who {
+  font: 700 0.72rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-body);
+}
+
+.turn-user {
+  border-left: 4px solid var(--accent);
+  background: var(--surface);
+}
+
+.turn-agent.plan {
+  border-style: dashed;
+}
+
+.ask-approve {
+  border: 1px dashed var(--status-warn);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
