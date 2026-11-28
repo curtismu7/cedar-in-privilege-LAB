@@ -467,6 +467,7 @@ td {
   display: grid;
   gap: 8px;
   margin: 8px 0;
+  max-width: min(100%, 48rem); /* a prompt box does not need the full card width: the rest stays free for the Story bubble */
 }
 
 .ask-form textarea {

@@ -78,14 +78,18 @@ export default function AskAgent({ scenario, resetKey }) {
     setBusy(true);
     setError(null);
     lastBody.current = body;
+    // Story host hook (storyWiring.js listens), as FlowSim does: ok is false only when the request itself failed; a hold or a refusal is a completed run.
+    window.dispatchEvent(new CustomEvent("cip:run-start"));
     const res = await postJson("/api/agent/ask", body);
-    if (mine !== latest.current) return;
+    if (mine !== latest.current) { window.dispatchEvent(new CustomEvent("cip:run-end", { detail: { ok: true } })); return; }
     setBusy(false);
     if (res.status !== 200 || !res.body || !res.body.transcript) {
       setError(`The agent could not run: ${failureText(res.status, res.body)}`);
+      window.dispatchEvent(new CustomEvent("cip:run-end", { detail: { ok: false } }));
       return;
     }
     setAnswer(res.body);
+    window.dispatchEvent(new CustomEvent("cip:run-end", { detail: { ok: true } }));
   };
 
   // An approval is for the prompt the shown answer was for, never for text edited since: it sends the answered prompt.
@@ -172,7 +176,7 @@ export default function AskAgent({ scenario, resetKey }) {
           )}
           <h3>The policies on the door</h3>
           <PolicyList policies={run.policies} />
-          <h3>API calls and responses</h3>
+          <h3 data-testid="ask-calls">API calls and responses</h3>
           {answer.exchanges.length === 0 ? (
             <p className="hint" data-testid="ask-no-calls">The agent made no API call: no tool matched the prompt, so there was nothing to send.</p>
           ) : (

@@ -152,6 +152,46 @@ Without the policies both tools are served: sign-in is the only gate. This is th
 
 ---
 
+# Step: ask_intro
+
+## Title
+Now say it in words
+
+## Text
+Case 1 again, this time with an agent. Picking a case sets the door's policies and fills in a prompt. The agent is scripted, not a model: it reads count, list or search, and the policies decide, not your words. Simulated.
+
+---
+
+# Step: ask_run_held
+
+## Title
+Run: the agent's call is held
+
+## Text
+The agent asks the mock PingFederate for a token, then calls SearchIndexTool. The door holds the call for a person and the agent says it will wait. The prompt chose the tool; the policy made the call wait. Simulated.
+
+---
+
+# Step: ask_run_approved
+
+## Title
+Run: approve, the agent retries
+
+## Text
+You play the approver (simulated). The approval is recorded, the agent retries the held call and the door serves it. Same token, same policy: the approval was the only change.
+
+---
+
+# Step: ask_calls
+
+## Title
+The API calls and responses
+
+## Text
+Every exchange in order: the token request to the mock PingFederate, then each tools/call to the door with its reply and the two checks, sign-in and AI policy. The token is mock-issued and shown whole. Nothing here leaves this machine.
+
+---
+
 # Step: setup_guide
 
 ## Title
@@ -192,7 +232,7 @@ Three cases walked, one measured. The measured run's own lab is cedar-act-sub-LA
 
 ## Column A: Try next
 - Run the step-up case
-- Reset and replay a case
+- Type your own prompt to the agent
 - Read the UNVERIFIED list
 
 ## Column B: Remember

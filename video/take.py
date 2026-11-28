@@ -9,6 +9,7 @@ against this checkout's video/captions.md by the lab's sourceSha256 before recor
 
 Usage: python3 take.py <work_dir>       (work_dir gets result.json, take.log and film.mp4)
 Env:   APP_URL (default http://127.0.0.1:7820) · PROFILE=monitor|laptop · REHEARSE=1 (fast dry run, no recording)
+       REHEARSE_SHOTS=<dir> (with REHEARSE=1: one still per step, to read before a real take)
 """
 import json, os, shutil, subprocess, sys
 from pathlib import Path
@@ -21,7 +22,11 @@ PROFILES = {"monitor": dict(width=1920, height=1080), "laptop": dict(width=1800,
 _prof = PROFILES[PROFILE]
 REHEARSE = os.environ.get("REHEARSE") == "1"
 APP = os.environ.get("APP_URL", "http://127.0.0.1:7820")
-# The walk: (key, kind, scenario-to-click-or-None). Mirrors web/src/storyScript.js; test/story.test.js checks the order.
+SHOTS = Path(os.environ["REHEARSE_SHOTS"]) if os.environ.get("REHEARSE_SHOTS") else None
+# The walk: (key, kind, what-to-press-or-None). Mirrors web/src/storyScript.js; test/story.test.js checks the order.
+#   "run"  the third item is a scenario id: the page's own case button
+#   "ask"  the third item is a test id of the Ask the agent step: ask-send (the prompt is TYPED into the box first, key by key, so the film shows a person typing)
+#          or ask-approve-btn (the approver's button)
 WALK = [
     ("opening", "slide", None),
     ("banner", "bubble", None),
@@ -29,6 +34,7 @@ WALK = [
     ("scope_intro", "bubble", None), ("scope_run_without", "run", "scope-1-without"), ("scope_run_with", "run", "scope-2-with"),
     ("actsub_intro", "bubble", None), ("actsub_run_gate", "run", "actsub-2-gate"), ("candidate", "run", "actsub-3-candidate"),
     ("actsub_baseline", "run", "actsub-1-baseline"),
+    ("ask_intro", "run", "hold-2-approve"), ("ask_run_held", "ask", "ask-send"), ("ask_run_approved", "ask", "ask-approve-btn"), ("ask_calls", "bubble", None),
     ("setup_guide", "bubble", None), ("is_is_not", "bubble", None), ("measured", "bubble", None),
     ("closing", "slide", None),
 ]
@@ -47,9 +53,12 @@ with sync_playwright() as p:
     ctx.add_init_script("window.__pillText = " + json.dumps("SAMPLE: simulated runs, not a live tenant") + ";")
     page = ctx.new_page()
     errors = []
+    page.on("console", lambda m: log("CONSOLE", m.type, m.text) if m.type in ("warning", "error") else None)   # the engine says why a step stalled here
     page.on("pageerror", lambda e: (errors.append(str(e)), log("PAGEERROR:", e)))
     captions.load(APP, Path(__file__).resolve().parent.parent / "video" / "captions.md")   # wording freshness gate
     page.goto(APP + "/")
+    # While a person "types" and presses a button the Story bubble steps aside, so the film shows the hands, then the bubble comes back with the result.
+    page.add_style_tag(content="html.take-quiet .story-bub, html.take-quiet .story-hl, html.take-quiet .story-tail { visibility: hidden !important; }")
     page.wait_for_selector("[data-testid=story-toggle-story]")
     page.click("[data-testid=story-toggle-story]")
     page.wait_for_selector("[data-testid=story-bar]")
@@ -71,7 +80,35 @@ with sync_playwright() as p:
                 # The engine itself waits for the run; the bar leaves 'waiting'. Wait for the result, then the engine settles.
                 page.wait_for_selector("[data-testid=run-status]:not(:has-text('Running the walk'))", timeout=30000)
                 settle(HOLD_RUN_S * 1000)   # let the run's result (and the diagram animation) play out on screen before the next bubble
+            if key == "ask_intro":   # the case button is above the prompt box: bring the box to the middle of the screen
+                page.evaluate("document.querySelector('[data-testid=ask-prompt]').scrollIntoView({block: 'center'})")
+                settle(1200)
+            if kind == "ask":
+                page.evaluate("document.documentElement.classList.add('take-quiet')")
+                if scen == "ask-send":
+                    box = page.locator("[data-testid=ask-prompt]")
+                    box.scroll_into_view_if_needed()
+                    text = box.input_value()          # the case's suggested prompt, typed again by "hand" so the film shows the typing
+                    box.fill("")
+                    box.click()
+                    page.keyboard.type(text, delay=0 if REHEARSE else 45)
+                    settle(900)
+                    page.click("[data-testid=ask-send]")
+                    page.wait_for_selector("[data-testid=ask-answer]", timeout=30000)
+                else:
+                    page.locator(f"[data-testid={scen}]").scroll_into_view_if_needed()
+                    page.click(f"[data-testid={scen}]")
+                    page.wait_for_selector("[data-testid=ask-approve]", state="detached", timeout=30000)
+                page.evaluate("document.documentElement.classList.remove('take-quiet')")
+                settle(HOLD_RUN_S * 1000)
             settle((HOLD_SLIDE_S if kind == "slide" else HOLD_BUBBLE_S) * 1000)   # hold the engine-drawn step on screen for the video
+            log(f"{key}: bar={page.get_attribute('[data-testid=story-bar]', 'data-status')} msg={page.inner_text('[data-testid=story-msg]')!r}")
+            if key == "ask_calls":    # the panel the bubble points at, at the top of the screen
+                page.evaluate("document.querySelector('[data-testid=ask-calls]').scrollIntoView({block: 'start'})")
+                settle(1200)
+            if SHOTS and REHEARSE:
+                SHOTS.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(SHOTS / f"{key}.png"))
             page.click("[data-testid=story-next]")
             settle(900)
             status = page.get_attribute("[data-testid=story-bar]", "data-status")

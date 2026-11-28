@@ -33,7 +33,7 @@ test('story: the parity check really fails when the wording and the script drift
 });
 
 test('story: the script walks the talk track in order, all bubbles Mock (this lab has no Real mode)', () => {
-  const order = ['banner', 'hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'setup_guide', 'is_is_not', 'measured'];
+  const order = ['banner', 'hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'ask_intro', 'ask_run_held', 'ask_run_approved', 'ask_calls', 'setup_guide', 'is_is_not', 'measured'];
   assert.deepEqual(steps.filter((s) => s.type === 'bubble' && !STORY_ONLY.includes(s.key)).map((s) => s.key), order);
   assert.deepEqual(steps.filter((s) => s.modes?.includes('real')).map((s) => s.key), [], 'no Real-only steps: the lab is Mock-only');
   for (const s of steps.filter((s) => s.type === 'bubble')) {
@@ -67,11 +67,24 @@ test('story: every run-done step names the scenario button Play clicks (the walk
     hold_run_held: 'hold-1-held', hold_run_approved: 'hold-2-approve',
     scope_run_without: 'scope-1-without', scope_run_with: 'scope-2-with',
     actsub_run_gate: 'actsub-2-gate', candidate: 'actsub-3-candidate', actsub_baseline: 'actsub-1-baseline',
+    ask_intro: 'hold-2-approve',
   };
   const byKey = Object.fromEntries(steps.map((s) => [s.key, s]));
   for (const [bubble, scen] of Object.entries(scens)) {
     assert.ok(byKey[bubble] && byKey[bubble].prompt && byKey[bubble].prompt.press.includes(scen), `${bubble}: prompt.press names scenario ${scen}`);
   }
+});
+
+test('story: the Ask the agent steps press the page\'s own buttons, in the order a viewer would (case, Send, Approve), and point at the page\'s own panels', () => {
+  const byKey = Object.fromEntries(steps.map((s) => [s.key, s]));
+  assert.equal(byKey.ask_run_held.prompt.press, '[data-testid=ask-send]');
+  assert.equal(byKey.ask_run_approved.prompt.press, '[data-testid=ask-approve-btn]');
+  assert.equal(byKey.ask_calls.trigger, 'load');
+  // Each selector is a test id the page really renders (AskAgent.jsx), so a rename there fails here, not in a recording.
+  const page = readFileSync(join(root, 'web/src/AskAgent.jsx'), 'utf8');
+  for (const id of ['ask-prompt', 'ask-send', 'ask-approve-btn', 'ask-answer', 'ask-calls']) assert.ok(page.includes(`"${id}"`), `${id} is rendered by AskAgent.jsx`);
+  // The page announces the agent's runs the way FlowSim announces the diagram's, which is what a run-done step waits for.
+  assert.ok(page.includes('cip:run-start') && page.includes('cip:run-end'));
 });
 
 test('story: captions.md and the script are public-safe (no internal host, tenant id, key or screenshot data)', () => {
