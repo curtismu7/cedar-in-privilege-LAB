@@ -33,7 +33,7 @@ test('story: the parity check really fails when the wording and the script drift
 });
 
 test('story: the script walks the talk track in order, all bubbles Mock (this lab has no Real mode)', () => {
-  const order = ['banner', 'hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'ask_intro', 'ask_run_held', 'ask_run_approved', 'ask_calls', 'claims_intro', 'claims_run_without', 'claims_run_with', 'claims_run_forged', 'user_intro', 'user_run_other', 'user_run_right', 'group_intro', 'group_run_wrong', 'group_run_lookalike', 'block_intro', 'block_run_blocked', 'block_run_other', 'layered_intro', 'layered_run_scope', 'layered_run_all', 'setup_guide', 'is_is_not', 'measured'];
+  const order = ['hold_intro', 'hold_run_held', 'hold_run_approved', 'scope_intro', 'scope_run_without', 'scope_run_with', 'actsub_intro', 'actsub_run_gate', 'candidate', 'actsub_baseline', 'ask_intro', 'ask_run_held', 'ask_run_approved', 'ask_calls', 'claims_intro', 'claims_run_without', 'claims_run_with', 'claims_run_forged', 'user_intro', 'user_run_other', 'user_run_right', 'group_intro', 'group_run_wrong', 'group_run_lookalike', 'block_intro', 'block_run_blocked', 'block_run_other', 'layered_intro', 'layered_run_scope', 'layered_run_all', 'setup_guide', 'is_is_not', 'measured'];
   assert.deepEqual(steps.filter((s) => s.type === 'bubble' && !STORY_ONLY.includes(s.key)).map((s) => s.key), order);
   assert.deepEqual(steps.filter((s) => s.modes?.includes('real')).map((s) => s.key), [], 'no Real-only steps: the lab is Mock-only');
   for (const s of steps.filter((s) => s.type === 'bubble')) {

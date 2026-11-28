@@ -118,7 +118,7 @@ describe("Shelf link", () => {
       stubFetch(shelf);
       const { unmount } = render(<App />);
       const menu = within(await screen.findByTestId("top-menu"));
-      await waitFor(() => expect(screen.getByTestId("sim-banner")).toBeTruthy());
+      await waitFor(() => expect(screen.getByTestId("mode-modal")).toBeTruthy());
       await new Promise((r) => setTimeout(r, 30));
       expect(menu.queryByRole("link", { name: "Shelf" })).toBeNull();
       expect(menu.getByTestId("help-link")).toBeTruthy();
@@ -139,7 +139,7 @@ describe("Talk track", () => {
     expect(TALK_TRACK).toEqual(parseTalkTrack(talkMd));
     expect(new Set(TALK_TRACK.map((t) => t.id)).size).toBe(TALK_TRACK.length);
     for (const t of TALK_TRACK) { expect(t.title.length).toBeGreaterThan(0); expect(t.say.length).toBeGreaterThan(0); expect(t.title + t.say).not.toMatch(/\*\*|`/); }
-    expect(TALK_TRACK[1].title).toBe("Point at the banner");
+    expect(TALK_TRACK[1].title).toBe("Read the Mock modal");
   });
 
   it("the header button opens the shared talk-track dialog with the script, and a second press closes it", async () => {
@@ -154,8 +154,8 @@ describe("Talk track", () => {
     expect(toggle).toHaveAttribute("aria-pressed", "true");
     expect(within(dialog).getByTestId("talk-track")).toBeTruthy();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(TALK_TRACK.length);
-    expect(within(dialog).getByRole("heading", { name: "Point at the banner" })).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(/The runs are simulated/);
+    expect(within(dialog).getByRole("heading", { name: "Read the Mock modal" })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(/the runs are simulated/);
     fireEvent.click(toggle);
     await waitFor(() => expect(screen.queryByTestId("talk-track-dialog")).toBeNull());
     expect(err).not.toHaveBeenCalled();

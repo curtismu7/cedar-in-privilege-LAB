@@ -8,7 +8,7 @@ import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import { HELP_SECTIONS } from "./helpContent.js";
 import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
-import SimulationBanner from "./Banner.jsx";
+import ModeModal from "./mode-modal/ModeModal.jsx";
 import FlowSim from "./FlowSim.jsx";
 import AskAgent from "./AskAgent.jsx";
 import RealRunPanel from "./RealRunPanel.jsx";
@@ -22,6 +22,10 @@ const LAB_VERSION = typeof __LAB_VERSION__ === "string" ? __LAB_VERSION__ : null
 
 // Story mode (shared/story/README.md): the toggle is in the shell's extra slot; the walk-through itself is lazy-loaded, so Demo mode never pays for it.
 const STORY_PREFIX = "cip";
+const MODE_LINES = {
+  mock: "Everything on this page is simulated: a mock token and a mock door. The door is not a Cedar engine and decides nothing real.",
+  real: "The act.sub case runs against your PingFederate and door. The hold and scope cases stay simulated; the door is not a Cedar engine and decides nothing real for them.",
+};
 // Cedar's own public pages (links only: this lab never calls them).
 const CEDAR_SITE = "https://www.cedarpolicy.com/";
 const CEDAR_REFERENCE = "https://docs.cedarpolicy.com/policies/syntax-policy.html";
@@ -191,7 +195,6 @@ export default function App() {
       </header>
       <div className="accent-rule" aria-hidden="true" />
       <main>
-        <SimulationBanner source={source} />
         {(catalog.error || info.error) && (
           <div className="error-pane" role="alert" data-testid="load-error">
             <span>The page could not load its data: {catalog.error || info.error}.</span>
@@ -237,6 +240,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      <ModeModal mode={source} lines={MODE_LINES} suppress={storyOn} storageKey="cip-mode" />
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />
 

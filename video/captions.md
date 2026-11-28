@@ -42,16 +42,6 @@ Every run on this page is simulated; the mock door evaluates three rule shapes a
 
 ---
 
-# Step: banner
-
-## Title
-What is simulated here
-
-## Text
-The runs use a mock token and a mock door. The door evaluates three rule shapes; it is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant.
-
----
-
 # Step: hold_intro
 
 ## Title

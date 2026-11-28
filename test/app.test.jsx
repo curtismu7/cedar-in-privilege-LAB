@@ -38,7 +38,7 @@ const REAL_REASON = "Real is owner-gated: with a valid local .env the page runs 
 const j = (body, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 
 // `fail`: (path) => undefined | "reject" | { status, html: true }
-function mockFetch({ fail = () => undefined } = {}) {
+function mockFetch({ fail = () => undefined, source = "mock" } = {}) {
   const calls = [];
   global.fetch = (path, opts) => {
     const method = (opts && opts.method) || "GET";
@@ -47,7 +47,7 @@ function mockFetch({ fail = () => undefined } = {}) {
     if (f === "reject") return Promise.reject(new TypeError("Failed to fetch"));
     if (f && f.html) return Promise.resolve({ ok: false, status: f.status, json: () => Promise.reject(new SyntaxError("<html")) });
     if (path.startsWith("/api/catalog")) return j(catalog(new URL(path, "http://x").searchParams.get("pack") || "airline"));
-    if (path === "/api/info") return j({ source: "mock", realAvailable: false, realReason: REAL_REASON });
+    if (path === "/api/info") return j({ source, realAvailable: source === "real", realReason: REAL_REASON });
     if (path === "/api/run") return j(runScenario(SCENARIOS.find((s) => s.id === JSON.parse(opts.body).scenario)));
     if (path === "/api/reset") return j({ ok: true });
     if (path === "/api/mode") {
@@ -62,16 +62,30 @@ const pick = async (name) => fireEvent.click(await screen.findByRole("button", {
 const ran = () => waitFor(() => expect(screen.getByTestId("run-result")).toBeTruthy(), { timeout: 8000 });
 
 describe("the page", () => {
-  it("renders the simulation banner first, saying what is simulated, that the door is not a Cedar engine and that only act.sub was measured", async () => {
+  it("opens on a modal that says MOCK, in one short line, and closes on Got it without coming back this session", async () => {
     mockFetch();
+    sessionStorage.clear();
+    const { unmount } = render(<App />);
+    const modal = await screen.findByTestId("mode-modal");
+    expect(modal.textContent).toMatch(/MOCK/);
+    expect(modal.textContent).toMatch(/simulated/i);
+    expect(modal.textContent).toMatch(/not a Cedar engine/);
+    expect(document.querySelector(".banner")).toBeNull();
+    fireEvent.click(screen.getByTestId("mode-modal-ok"));
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+    unmount();
     render(<App />);
-    const banner = await screen.findByTestId("sim-banner");
-    expect(banner.textContent).toMatch(/simulated/i);
-    expect(banner.textContent).toMatch(/not a Cedar engine/);
-    expect(banner.textContent).toMatch(/THREE Cedar rule shapes/);
-    expect(banner.textContent).toMatch(/Only the act\.sub case has a result measured on a real tenant/);
-    expect(banner.textContent).toMatch(/hold and scope cases are simulated/);
-    expect(banner.compareDocumentPosition(screen.getByTestId("intro")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await screen.findByTestId("intro");
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+  });
+
+  it("the modal says REAL, and that hold and scope stay simulated, when the lab runs in Real", async () => {
+    sessionStorage.clear();
+    mockFetch({ source: "real" });
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("mode-modal").dataset.mode).toBe("real"));
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/REAL/);
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/hold and scope cases stay simulated/);
   });
 
   it("renders the shared TopMenu in the header, with mode, theme, presenter and Reset", async () => {
@@ -277,7 +291,7 @@ describe("the page", () => {
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/Start with case 1/);
     fireEvent.click(await screen.findByRole("button", { name: "Two policies, same token" }));
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/names a different value the call is refused/);
-    expect(screen.getByTestId("sim-banner")).toBeTruthy();
+    expect(screen.getByTestId("mode-modal")).toBeTruthy();
   });
 
   it("the measured card is separate from the runs, labelled with its date, and says it covers act.sub only", async () => {
