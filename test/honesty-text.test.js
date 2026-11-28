@@ -156,23 +156,14 @@ test("Real is described as owner-gated with a .env, the probe's read-only shape,
   assert.match(shown("docs/talk-track.md"), /Real runs the same read-only probe/);
 });
 
-// F05: what the page labels UNVERIFIED (narrowing only, not a grant, not the RequiredClaims gate, not a regex engine) is never stated as
-// fact in the pack, README or talk track: each mention sits next to UNVERIFIED or "believed".
-test("the UNVERIFIED Is / Is not claims carry their hedge wherever the pack, README or talk track say them", () => {
-  const CLAIM = /not a grant|not the RequiredClaims|not a regex engine|a grant\./gi;
-  let seen = 0;
-  for (const file of ["content-pack.json", "README.md", "docs/talk-track.md"]) {
-    const text = read(file);
-    for (const m of text.matchAll(CLAIM)) {
-      seen += 1;
-      // The hedge must be in the same sentence as the claim (a hedge in the next sentence does not count).
-      const from = Math.max(text.lastIndexOf(". ", m.index), text.lastIndexOf("\n", m.index), 0);
-      const ends = [text.indexOf(". ", m.index), text.indexOf("\n", m.index)].filter((i) => i >= 0);
-      const sentence = text.slice(from, ends.length ? Math.min(...ends) : text.length);
-      assert.match(sentence, /UNVERIFIED|believed/, `${file}: "${m[0]}" without UNVERIFIED / believed in its sentence`);
-    }
+// F05, tightened 2026-11-28: narrowing only, not a grant, not the RequiredClaims gate and not a regex engine were UNVERIFIED claims that no one
+// could test (no tenant access), so they were removed everywhere the lab asserts what Cedar is. They may come back only with a measurement or a
+// named source. A hedge (UNVERIFIED / "believed") is no longer enough to keep one in the pack, README, talk track or captions.
+test("the removed, unverifiable Is / Is not claims are not said anywhere (pack, README, talk track, captions, guide)", () => {
+  const CLAIM = /not a grant|not to be a grant|not the RequiredClaims|not a regex engine|narrowing only|a policy never grants|same job (as an act\.sub policy )?earlier/i;
+  for (const file of ["content-pack.json", "README.md", "docs/talk-track.md", "video/captions.md", "server/src/guide.js", "server/src/scenarios.js"]) {
+    for (const line of read(file).split("\n")) assert.doesNotMatch(line, CLAIM, `${file}: removed claim is back: ${line.slice(0, 140)}`);
   }
-  assert.ok(seen >= 6, `expected the claims in the pack, README and talk track; saw ${seen}`);
 });
 
 // F06: the real refusal message carried the policy's reason (the tool and the required act.sub value), not a policy name or id. Nothing

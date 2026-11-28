@@ -153,7 +153,6 @@ export const EVIDENCE = {
     "The hold-for-a-human and token-scope cases of this lab: they are simulated here, and nothing on this card is about them."
   ],
   alsoTrue: [
-    "UNVERIFIED, not tested here: RequiredClaims on the identity or grant is believed to do the same job earlier, at sign-in.",
     "UNVERIFIED, not tested here: the act.sub template's rule is a .contains() test on the claim, not a pattern. The mock compares exactly (an equal string or a list member).",
     "UNVERIFIED, per the Privilege console documentation and not re-run here: a Candidate policy is not enforced, only Active is."
   ],

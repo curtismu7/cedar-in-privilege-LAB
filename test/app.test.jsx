@@ -233,10 +233,10 @@ describe("the page", () => {
     fireEvent.click(within(screen.getByRole("navigation", { name: "Sections" })).getByText("Is / Is not"));
     const panel = await screen.findByTestId("is-is-not");
     expect(panel.id).toBe("is");
-    expect(within(screen.getByTestId("is-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(6);
-    expect(within(screen.getByTestId("is-not-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(6);
+    expect(within(screen.getByTestId("is-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(5);
+    expect(within(screen.getByTestId("is-not-list")).getAllByRole("listitem", { hidden: true })).toHaveLength(3);
     const labels = within(panel).getAllByTestId("label").map((n) => n.textContent);
-    expect(new Set(labels)).toEqual(new Set(["console text", "UNVERIFIED", "measured"]));
+    expect(new Set(labels)).toEqual(new Set(["console text", "measured"]));
     expect(labels.filter((l) => l === "measured")).toHaveLength(1);
   });
 
