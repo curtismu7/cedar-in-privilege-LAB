@@ -471,9 +471,9 @@ test("the 7 seconds is one observation, and the 4 minutes is documentation text,
   assert.match(status.text, /HTTP status of a policy refusal was not tested/);
 });
 
-test("the IS / IS NOT panel: six lines each, every line labelled, and the claims that were not measured never read as measured", () => {
-  assert.equal(IS_IS_NOT.is.length, 6);
-  assert.equal(IS_IS_NOT.isNot.length, 6);
+test("the IS / IS NOT panel: every line labelled, only lines with a source stay, and the claims nobody could verify are not on the page", () => {
+  assert.equal(IS_IS_NOT.is.length, 5);
+  assert.equal(IS_IS_NOT.isNot.length, 3);
   for (const item of [...IS_IS_NOT.is, ...IS_IS_NOT.isNot]) {
     assert.ok(LABELS.includes(item.label), item.text);
     assert.ok(item.text.length > 20);
@@ -483,10 +483,10 @@ test("the IS / IS NOT panel: six lines each, every line labelled, and the claims
   assert.match(measured[0].text, /act\.sub/);
   assert.match(measured[0].text, /one real agent/);
   const text = (re) => [...IS_IS_NOT.is, ...IS_IS_NOT.isNot].find((i) => re.test(i.text));
-  assert.equal(text(/Narrowing only/).label, "UNVERIFIED");
-  assert.equal(text(/RequiredClaims/).label, "UNVERIFIED");
-  assert.equal(text(/regex engine/).label, "UNVERIFIED");
-  assert.equal(text(/A grant/).label, "UNVERIFIED");
+  // Removed 2026-11-28 because they could not be verified (no tenant access to test them): narrowing only, not a grant, not the RequiredClaims
+  // gate, not a regex engine. They come back only with a measurement or a named source; an UNVERIFIED line may not stand in for one.
+  for (const re of [/Narrowing only/, /A grant\./, /RequiredClaims/, /regex engine/]) assert.equal(text(re), undefined, String(re));
+  assert.ok([...IS_IS_NOT.is, ...IS_IS_NOT.isNot].every((i) => i.label !== "UNVERIFIED"), "no line on this page is an unverified claim");
   assert.match(text(/Everything/).text, /2026-10-20 and were not re-checked/);
   for (const re of [/rule engine/, /mcp:Invoke \(refuse/, /mcp:InvokeUnattended \(hold/, /llm:Receive \(withhold/, /scopes/, /Candidate/, /Authentication/, /Instant/]) assert.ok(text(re), String(re));
 });
