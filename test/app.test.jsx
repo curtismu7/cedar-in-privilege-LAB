@@ -91,7 +91,8 @@ describe("the page", () => {
     const reason = screen.getByTestId("real-reason");
     expect(reason.textContent).toMatch(/Real needs the owner's local \.env/);
     expect(reason.textContent).toMatch(/read-only probe/);
-    expect(screen.getByTestId("mode-select").getAttribute("aria-describedby")).toBe("real-reason");
+    // The link to the reason is set in an effect after the render that disables the button, so wait for it rather than read it at once.
+    await waitFor(() => expect(screen.getByTestId("mode-select").getAttribute("aria-describedby")).toBe("real-reason"));
   });
 
   it("the toggle posts the mode: Real answers 409 and nothing changes, Mock answers 200 and reloads the data", async () => {
