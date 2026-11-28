@@ -21,7 +21,7 @@ beforeEach(() => { setJsonView("raw"); try { history.replaceState(null, "", loca
 afterEach(() => cleanup());
 
 // The catalog and the runs come from the real server modules, so the page is tested against what the server really answers.
-const catalog = (pack = "banking") => ({
+const catalog = (pack = "airline") => ({
   pack,
   packs: packList(),
   org: null,
@@ -46,7 +46,7 @@ function mockFetch({ fail = () => undefined } = {}) {
     const f = fail(path, calls.filter((c) => c.path === path).length);
     if (f === "reject") return Promise.reject(new TypeError("Failed to fetch"));
     if (f && f.html) return Promise.resolve({ ok: false, status: f.status, json: () => Promise.reject(new SyntaxError("<html")) });
-    if (path.startsWith("/api/catalog")) return j(catalog(new URL(path, "http://x").searchParams.get("pack") || "banking"));
+    if (path.startsWith("/api/catalog")) return j(catalog(new URL(path, "http://x").searchParams.get("pack") || "airline"));
     if (path === "/api/info") return j({ source: "mock", realAvailable: false, realReason: REAL_REASON });
     if (path === "/api/run") return j(runScenario(SCENARIOS.find((s) => s.id === JSON.parse(opts.body).scenario)));
     if (path === "/api/reset") return j({ ok: true });
@@ -145,9 +145,9 @@ describe("the page", () => {
     const calls = mockFetch();
     render(<App />);
     await screen.findByRole("button", { name: "Hold: no approval yet" });
-    expect(screen.getByTestId("story-hold").textContent).toMatch(/^Example Bank runs a payments assistant\./);
-    expect(screen.getByTestId("pack-select").value).toBe("banking");
-    expect(within(screen.getByTestId("pack-select")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Banking", "Healthcare", "Retail"]);
+    expect(screen.getByTestId("story-hold").textContent).toMatch(/^Example Air runs a rebooking assistant\./);
+    expect(screen.getByTestId("pack-select").value).toBe("airline");
+    expect(within(screen.getByTestId("pack-select")).getAllByRole("option").map((o) => o.textContent)).toEqual(["Airline", "Banking", "Healthcare", "Retail"]);
     fireEvent.change(screen.getByTestId("pack-select"), { target: { value: "healthcare" } });
     await waitFor(() => expect(screen.getByTestId("story-hold").textContent).toMatch(/^Example Health runs a scheduling assistant\./));
     expect(calls.some((c) => c.path === "/api/catalog?pack=healthcare")).toBe(true);

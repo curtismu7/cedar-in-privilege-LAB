@@ -1,4 +1,4 @@
-// Rules 10 and 12: stories are data with {{cast}} tokens and three vertical packs, and a token with no value fails a test; customer.config
+// Rules 10 and 12: stories are data with {{cast}} tokens and four vertical packs, and a token with no value fails a test; customer.config
 // sets the organisation and the default pack, and anything invalid in it is ignored.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -8,11 +8,11 @@ import { STORIES, PACKS, CAST_KEYS, DEFAULT_PACK, tokensOf, renderStory, stories
 import { parseCustomerConfig, loadCustomerConfig } from "../server/src/customer.js";
 import { CASES } from "../server/src/scenarios.js";
 
-test("there is one story per case and three vertical packs", () => {
+test("there is one story per case and four vertical packs", () => {
   assert.deepEqual(Object.keys(STORIES), CASES.map((c) => c.id));
-  assert.deepEqual(Object.keys(PACKS), ["banking", "healthcare", "retail"]);
-  assert.deepEqual(packList().map((p) => p.id), ["banking", "healthcare", "retail"]);
-  assert.equal(DEFAULT_PACK, "banking");
+  assert.deepEqual(Object.keys(PACKS), ["airline", "banking", "healthcare", "retail"]);
+  assert.deepEqual(packList().map((p) => p.id), ["airline", "banking", "healthcare", "retail"]);
+  assert.equal(DEFAULT_PACK, "airline");
 });
 
 test("every {{cast}} token in every story has a value in every pack, and every pack defines exactly the cast keys", () => {
@@ -50,13 +50,13 @@ test("the stories frame the cases and never claim a measurement for the simulate
 
 test("customer.config: a valid org and pack are used, anything else is ignored", () => {
   assert.deepEqual(parseCustomerConfig('{"org":"Acme Example, Inc.","pack":"retail"}'), { org: "Acme Example, Inc.", pack: "retail" });
-  const dflt = { org: null, pack: "banking" };
+  const dflt = { org: null, pack: "airline" };
   for (const bad of ["", "not json", "null", "[]", "5", '"x"', "{}", '{"org":5,"pack":5}', '{"pack":"__proto__"}', '{"pack":"nope"}', '{"org":"<script>alert(1)</script>"}',
     `{"org":"${"x".repeat(61)}"}`, '{"org":"a\\nb"}', '{"org":"{{cast.org}}"}', '{"org":"  lead"}']) {
     assert.deepEqual(parseCustomerConfig(bad), dflt, bad);
   }
   assert.deepEqual(loadCustomerConfig("/nonexistent/customer.config.json"), dflt, "no file: the defaults");
-  assert.deepEqual(parseCustomerConfig('{"org":"Acme","pack":"nope"}'), { org: "Acme", pack: "banking" }, "each field is judged alone");
+  assert.deepEqual(parseCustomerConfig('{"org":"Acme","pack":"nope"}'), { org: "Acme", pack: "airline" }, "each field is judged alone");
   assert.equal(storiesFor("retail", "Acme Example").hold.startsWith("Acme Example runs a stock assistant."), true);
 });
 
@@ -81,7 +81,7 @@ test("GET /api/catalog tells the stories in the customer's default pack, or in ?
     assert.equal(dflt.status, 200);
     assert.equal(dflt.body.pack, "healthcare");
     assert.equal(dflt.body.org, "Acme Example");
-    assert.deepEqual(dflt.body.packs.map((p) => p.id), ["banking", "healthcare", "retail"]);
+    assert.deepEqual(dflt.body.packs.map((p) => p.id), ["airline", "banking", "healthcare", "retail"]);
     assert.match(dflt.body.stories.hold, /^Acme Example runs a scheduling assistant\./);
     const retail = await get("?pack=retail");
     assert.equal(retail.body.pack, "retail");
@@ -92,12 +92,12 @@ test("GET /api/catalog tells the stories in the customer's default pack, or in ?
       const r = await get(q);
       assert.equal(r.status, 400, q);
       assert.equal(r.body.error, "unknown_pack", q);
-      assert.match(r.body.message, /one of banking, healthcare, retail/);
+      assert.match(r.body.message, /one of airline, banking, healthcare, retail/);
     }
   });
   await withApp({}, async (get) => {
     const r = await get("");
     assert.equal(r.status, 200);
-    assert.ok(["banking", "healthcare", "retail"].includes(r.body.pack));
+    assert.ok(["airline", "banking", "healthcare", "retail"].includes(r.body.pack));
   });
 });

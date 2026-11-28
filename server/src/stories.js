@@ -1,4 +1,4 @@
-// Stories as data (rule 10): each case has one story text with {{cast.<name>}} tokens, and three vertical packs (banking, healthcare, retail)
+// Stories as data (rule 10): each case has one story text with {{cast.<name>}} tokens, and four vertical packs (airline, banking, healthcare, retail)
 // fill the cast. A token with no value in a pack is an error (a test and renderStory both refuse it), never a blank on the page.
 // The stories are framing only: they add no claim about what was measured. Example names only; the tools stay CountTool, ListIndexTool and
 // SearchIndexTool and the ids stay the lab's example ids.
@@ -6,6 +6,10 @@
 export const CAST_KEYS = ["org", "agent", "approver", "sensitive", "record"];
 
 export const PACKS = {
+  airline: {
+    label: "Airline",
+    cast: { org: "Example Air", agent: "rebooking assistant", approver: "duty manager", sensitive: "a full passenger-manifest search", record: "passenger bookings" }
+  },
   banking: {
     label: "Banking",
     cast: { org: "Example Bank", agent: "payments assistant", approver: "treasury officer", sensitive: "a large wire-transfer search", record: "customer accounts" }
@@ -19,7 +23,7 @@ export const PACKS = {
     cast: { org: "Example Retail", agent: "stock assistant", approver: "store manager", sensitive: "a full customer-order search", record: "customer orders" }
   }
 };
-export const DEFAULT_PACK = "banking";
+export const DEFAULT_PACK = "airline";
 
 export const STORIES = {
   hold: "{{cast.org}} runs a {{cast.agent}}. When it tries {{cast.sensitive}} with nobody watching, the policy says a {{cast.approver}} must approve first, so the call waits instead of failing. In this lab SearchIndexTool stands in for that search, and the whole case is simulated.",
