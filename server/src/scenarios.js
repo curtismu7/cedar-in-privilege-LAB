@@ -53,56 +53,56 @@ export const CASES = [
 
 export const SCENARIOS = [
   {
-    id: "hold-1-held", case: "hold", n: 1, label: "Hold: no approval yet", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    id: "hold-1-held", case: "hold", n: 1, label: "Hold: no approval yet", prompt: "Overnight, search the index for open cases and summarise them.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
     calls: [unattended("SearchIndexTool")], expect: ["held"], basis: "simulated",
     title: "1.1 Hold: no approval yet",
     what: "An Active hold policy sits on SearchIndexTool. The agent runs the tool with nobody watching (action mcp:InvokeUnattended; how the real gateway tells an unattended call apart was not measured, UNVERIFIED). There is no approval on record, so the unless clause is false and the call is held for a human, with an approval id.",
     say: "A policy forbids the unattended action unless an approval is on record. No approval yet, so the call is held, not refused: it waits for a person."
   },
   {
-    id: "hold-2-approve", case: "hold", n: 2, label: "Hold, approve, retry", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    id: "hold-2-approve", case: "hold", n: 2, label: "Hold, approve, retry", prompt: "Overnight, search the index for open cases and summarise them.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
     calls: [unattended("SearchIndexTool"), APPROVE, unattended("SearchIndexTool")], expect: ["held", "approved", "allowed"], basis: "simulated",
     title: "1.2 Hold, approve, retry",
     what: "The same call is held. A person approves it (simulated here: the lab records one approval, with the approver id example). The agent retries, approval_count is now 1, the unless clause is true and the call goes through.",
     say: "The held call waits. A person approves it, the agent retries, and now the unless clause is satisfied, so the call is served. The approval is the only thing that changed."
   },
   {
-    id: "scope-1-without", case: "scope", n: 1, label: "Token without the scope", token: "agent", scope: SCOPE_LIST, policies: [POLICY_SCOPE],
+    id: "scope-1-without", case: "scope", n: 1, label: "Token without the scope", prompt: "Search the index for open cases.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_SCOPE],
     calls: [attended("SearchIndexTool")], expect: ["refused"], basis: "simulated",
     title: "2.1 Token without the scope",
     what: `An Active scope policy sits on SearchIndexTool and wants the ${SCOPE_SEARCH} scope. The token carries only ${SCOPE_LIST}, so the unless clause is false and the call is refused with JSON-RPC -32600 (the mock answers HTTP 400).`,
     say: "The policy asks for a scope the token does not carry, so the call is refused and the reason names the scope."
   },
   {
-    id: "scope-2-with", case: "scope", n: 2, label: "Token with the scope", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_SEARCH}`, policies: [POLICY_SCOPE],
+    id: "scope-2-with", case: "scope", n: 2, label: "Token with the scope", prompt: "Search the index for open cases.", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_SEARCH}`, policies: [POLICY_SCOPE],
     calls: [attended("SearchIndexTool")], expect: ["allowed"], basis: "simulated",
     title: "2.2 Token with the scope",
     what: `The same policy and the same tool, with a token that carries ${SCOPE_SEARCH} as well. The unless clause is true, so the call is served.`,
     say: "Same policy, same tool, a token that carries the scope: the call is served."
   },
   {
-    id: "actsub-1-baseline", case: "actsub", n: 1, label: "No policy: baseline", token: "agent", scope: SCOPE_LIST, policies: [],
+    id: "actsub-1-baseline", case: "actsub", n: 1, label: "No policy: baseline", prompt: "Count the entries, then list the index.", token: "agent", scope: SCOPE_LIST, policies: [],
     calls: [attended("CountTool"), attended("ListIndexTool")], expect: ["allowed", "allowed"], basis: "simulated", matchesMeasured: true,
     title: "3.1 No policy: baseline",
     what: "The door holds no AI policy. The agent's token carries act = {\"sub\": \"agent-client-example\"}. Both tools answer.",
     say: "No policy yet. The same token calls CountTool and ListIndexTool and both are allowed. That is the baseline."
   },
   {
-    id: "actsub-2-gate", case: "actsub", n: 2, label: "Two policies, same token", token: "agent", scope: SCOPE_LIST, policies: [POLICY_A, POLICY_B],
+    id: "actsub-2-gate", case: "actsub", n: 2, label: "Two policies, same token", prompt: "Count the entries, then list the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_A, POLICY_B],
     calls: [attended("CountTool"), attended("ListIndexTool")], expect: ["allowed", "refused"], basis: "simulated", matchesMeasured: true,
     title: "3.2 Two Active act.sub policies, same token",
     what: "Policy A on CountTool requires act.sub = agent-client-example (the token's own agent). Policy B on ListIndexTool requires act.sub = agent-b-example (a different agent). One token, two calls: CountTool is allowed, ListIndexTool is refused with JSON-RPC -32600.",
     say: "Same token, same door, two tools. Where the policy names this agent the call goes through; where it names a different value the call is refused and the reason names the claim."
   },
   {
-    id: "actsub-3-candidate", case: "actsub", n: 3, label: "Candidate state", token: "agent", scope: SCOPE_LIST, policies: [POLICY_A, POLICY_B], policyState: "Candidate",
+    id: "actsub-3-candidate", case: "actsub", n: 3, label: "Candidate state", prompt: "Count the entries, then list the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_A, POLICY_B], policyState: "Candidate",
     calls: [attended("CountTool"), attended("ListIndexTool")], expect: ["allowed", "allowed"], basis: "simulated",
     title: "3.3 Candidate state",
     what: "Both policies exist but are Candidate. Per the Privilege console documentation (not re-run here, UNVERIFIED) a Candidate is not enforced, so the mock allows ListIndexTool even though its policy names a different value. Only Active is enforced here.",
     say: "Per the console documentation (not re-run here), a policy that is still a Candidate is not enforced. If a refusal you expected does not happen, check the state first."
   },
   {
-    id: "stepup-1-approve", case: "stepup", n: 1, label: "Hold, step-up, approve, retry", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    id: "stepup-1-approve", case: "stepup", n: 1, label: "Hold, step-up, approve, retry", prompt: "Overnight, search the index for open cases and summarise them.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
     calls: [unattended("SearchIndexTool"), APPROVE_WITH_STEPUP, unattended("SearchIndexTool")], expect: ["held", "approved", "allowed"], basis: "simulated",
     stepUp: true,
     title: "4.1 Hold, PingID step-up, approve, retry",
@@ -110,7 +110,7 @@ export const SCENARIOS = [
     say: "The held call waits. The human's approval is itself protected: they complete a PingID step-up (push or code) before the approval records. A stolen agent session cannot approve — the step-up belongs to the person's device, not the agent."
   },
   {
-    id: "stepup-2-refused", case: "stepup", n: 2, label: "Step-up failed: approval never records", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
+    id: "stepup-2-refused", case: "stepup", n: 2, label: "Step-up failed: approval never records", prompt: "Overnight, search the index for open cases and summarise them.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_HOLD],
     calls: [unattended("SearchIndexTool"), APPROVE_WITH_STEPUP, unattended("SearchIndexTool")], expect: ["held", "rejected", "held"], basis: "simulated",
     stepUp: true, stepUpFails: true,
     title: "4.2 Step-up failed: the hold stands",

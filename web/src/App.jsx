@@ -10,6 +10,7 @@ import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
 import SimulationBanner from "./Banner.jsx";
 import FlowSim from "./FlowSim.jsx";
+import AskAgent from "./AskAgent.jsx";
 import RealRunPanel from "./RealRunPanel.jsx";
 import ScenarioPicker from "./ScenarioPicker.jsx";
 import Evidence from "./Evidence.jsx";
@@ -21,6 +22,9 @@ const LAB_VERSION = typeof __LAB_VERSION__ === "string" ? __LAB_VERSION__ : null
 
 // Story mode (shared/story/README.md): the toggle is in the shell's extra slot; the walk-through itself is lazy-loaded, so Demo mode never pays for it.
 const STORY_PREFIX = "cip";
+// Cedar's own public pages (links only: this lab never calls them).
+const CEDAR_SITE = "https://www.cedarpolicy.com/";
+const CEDAR_REFERENCE = "https://docs.cedarpolicy.com/policies/syntax-policy.html";
 const StoryRoot = lazy(() => import("./StoryRoot.jsx"));
 
 // If the Story chunk cannot load (the lab was rebuilt, a stale file name, the network) the page must survive: Demo mode is never taken down by Story.
@@ -200,7 +204,7 @@ export default function App() {
           <div className="tab-pane" data-testid={`pane-flow`} hidden={section !== "flow"}>
             <section className="card intro" data-testid="intro">
               <h1><span className="step-num" data-n="1" aria-hidden="true" />How Cedar AI policies work in PingOne Privilege</h1>
-              <p>Cedar is the policy language Privilege uses for its AI policies. A guided tour of three cases: a call held for a human, a token-scope gate, and an agent act.sub gate. Each is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. The other tabs: how to set Cedar up in the console, and what Cedar is and is not.</p>
+              <p>Cedar is an open-source policy language and specification (<a href={CEDAR_SITE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-site">cedarpolicy.com</a>, <a href={CEDAR_REFERENCE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-reference">policy language reference</a>), and the language Privilege uses for its AI policies. A guided tour of three cases: a call held for a human, a token-scope gate, and an agent act.sub gate. Pick a case, then type a prompt to an agent and watch what it sends to the door and what comes back. Each case is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. The other tabs: how to set Cedar up in the console, and what Cedar is and is not.</p>
               {data && <p className="hint">{data.mockNote}</p>}
             </section>
             {presenter && (
@@ -212,8 +216,12 @@ export default function App() {
               <h2><span className="step-num" data-n="2" aria-hidden="true" />The tour: three cases</h2>
               <ScenarioPicker cases={(data && data.cases) || []} scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} stories={data && data.stories} packs={data && data.packs} pack={data && data.pack} onPack={setPack} plain />
             </section>
+            <section className="card tour-section" data-testid="tour-ask">
+              <h2><span className="step-num" data-n="3" aria-hidden="true" />Ask the agent: type a prompt, see the API calls</h2>
+              <AskAgent scenario={activeScenario ? ((data && data.scenarios) || []).find((s) => s.id === activeScenario.id) || activeScenario : null} resetKey={resetKey} />
+            </section>
             <section className="card tour-section" data-testid="tour-flow">
-              <h2><span className="step-num" data-n="3" aria-hidden="true" />One call, one door, three kinds of Cedar answer</h2>
+              <h2><span className="step-num" data-n="4" aria-hidden="true" />One call, one door, three kinds of Cedar answer</h2>
               <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} headless />
             </section>
             {source === "real" && <RealRunPanel />}
