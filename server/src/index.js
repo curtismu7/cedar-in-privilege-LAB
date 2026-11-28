@@ -14,7 +14,7 @@ import { realModeState, runRealProbe } from "./realMode.js";
 import { createHealth } from "./health.js";
 import { SCENARIOS, CASES, EVIDENCE, MOCK_NOTE, policiesFor } from "./scenarios.js";
 import { GUIDE, IS_IS_NOT } from "./guide.js";
-import { PACKS, storiesFor, packList } from "./stories.js";
+import { PACKS, storiesFor, packList, resolvePack } from "./stories.js";
 import { loadCustomerConfig } from "./customer.js";
 import { checkPrompt, planPrompt, callsFor, tokenExchange, transcriptFor } from "./agent.js";
 
@@ -289,7 +289,7 @@ export function buildServer({ netguard, customer = loadCustomerConfig(), realEnv
   // ?pack=<id> picks the vertical pack the stories are told in (rule 10); without it the customer.config default is used (rule 12).
   app.get("/api/catalog", (req, res) => {
     const asked = req.query.pack;
-    const pack = asked === undefined ? customer.pack : asked;
+    const pack = asked === undefined ? customer.pack : resolvePack(asked);
     if (typeof pack !== "string" || !Object.hasOwn(PACKS, pack)) {
       return res.status(400).json({ error: "unknown_pack", message: `unknown pack; one of ${Object.keys(PACKS).join(", ")}` });
     }

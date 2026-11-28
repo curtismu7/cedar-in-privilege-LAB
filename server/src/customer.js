@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { PACKS, DEFAULT_PACK } from "./stories.js";
+import { PACKS, DEFAULT_PACK, resolvePack } from "./stories.js";
 
 const ORG = /^[A-Za-z0-9][A-Za-z0-9 .,&'-]{0,59}$/;
 const DEFAULT_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "customer.config.json");
@@ -15,7 +15,7 @@ export function parseCustomerConfig(text) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { org: null, pack: DEFAULT_PACK };
   return {
     org: typeof raw.org === "string" && ORG.test(raw.org) ? raw.org : null,
-    pack: typeof raw.pack === "string" && Object.hasOwn(PACKS, raw.pack) ? raw.pack : DEFAULT_PACK
+    pack: typeof raw.pack === "string" && Object.hasOwn(PACKS, resolvePack(raw.pack)) ? resolvePack(raw.pack) : DEFAULT_PACK
   };
 }
 

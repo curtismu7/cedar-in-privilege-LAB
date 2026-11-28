@@ -4,15 +4,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildServer } from "../server/src/index.js";
 import { stop, startVerified } from "./test-helpers.js";
-import { STORIES, PACKS, CAST_KEYS, DEFAULT_PACK, tokensOf, renderStory, storiesFor, packList } from "../server/src/stories.js";
+import { STORIES, PACKS, CAST_KEYS, DEFAULT_PACK, tokensOf, renderStory, storiesFor, packList, resolvePack } from "../server/src/stories.js";
 import { parseCustomerConfig, loadCustomerConfig } from "../server/src/customer.js";
 import { CASES } from "../server/src/scenarios.js";
 
 test("there is one story per case and four vertical packs", () => {
   assert.deepEqual(Object.keys(STORIES), CASES.map((c) => c.id));
-  assert.deepEqual(Object.keys(PACKS), ["airline", "banking", "healthcare", "retail"]);
-  assert.deepEqual(packList().map((p) => p.id), ["airline", "banking", "healthcare", "retail"]);
-  assert.equal(DEFAULT_PACK, "airline");
+  assert.deepEqual(Object.keys(PACKS), ["airlines", "banking", "healthcare", "retail"]);
+  assert.deepEqual(packList().map((p) => p.id), ["airlines", "banking", "healthcare", "retail"]);
+  assert.equal(DEFAULT_PACK, "airlines");
+  assert.equal(PACKS[DEFAULT_PACK].cast.org, "AirGuard Airlines");
 });
 
 test("every {{cast}} token in every story has a value in every pack, and every pack defines exactly the cast keys", () => {
@@ -50,14 +51,37 @@ test("the stories frame the cases and never claim a measurement for the simulate
 
 test("customer.config: a valid org and pack are used, anything else is ignored", () => {
   assert.deepEqual(parseCustomerConfig('{"org":"Acme Example, Inc.","pack":"retail"}'), { org: "Acme Example, Inc.", pack: "retail" });
-  const dflt = { org: null, pack: "airline" };
+  const dflt = { org: null, pack: "airlines" };
   for (const bad of ["", "not json", "null", "[]", "5", '"x"', "{}", '{"org":5,"pack":5}', '{"pack":"__proto__"}', '{"pack":"nope"}', '{"org":"<script>alert(1)</script>"}',
     `{"org":"${"x".repeat(61)}"}`, '{"org":"a\\nb"}', '{"org":"{{cast.org}}"}', '{"org":"  lead"}']) {
     assert.deepEqual(parseCustomerConfig(bad), dflt, bad);
   }
   assert.deepEqual(loadCustomerConfig("/nonexistent/customer.config.json"), dflt, "no file: the defaults");
-  assert.deepEqual(parseCustomerConfig('{"org":"Acme","pack":"nope"}'), { org: "Acme", pack: "airline" }, "each field is judged alone");
+  assert.deepEqual(parseCustomerConfig('{"org":"Acme","pack":"nope"}'), { org: "Acme", pack: "airlines" }, "each field is judged alone");
   assert.equal(storiesFor("retail", "Acme Example").hold.startsWith("Acme Example runs a stock assistant."), true);
+});
+
+test("the default airline run says AirGuard Airlines and carries no retired or other-vertical brand", () => {
+  const RETIRED = /Meridian Air|Example Air|Skyline Air|Northwind|Contoso|Fabrikam|Harbor|Vellum|Tessera|Example Bank|Example Health|Example Retail/;
+  const run = Object.values(storiesFor(DEFAULT_PACK, null)).join("\n") + "\n" + JSON.stringify(PACKS[DEFAULT_PACK]);
+  assert.match(run, /^AirGuard Airlines runs a rebooking assistant\./m);
+  assert.doesNotMatch(run, RETIRED);
+  // the other packs keep their own brand and never tell the airline's
+  for (const [id, brand] of [["banking", "Example Bank"], ["healthcare", "Example Health"], ["retail", "Example Retail"]]) {
+    const out = Object.values(storiesFor(id, null)).join("\n");
+    assert.match(out, new RegExp(`^${brand} runs a`, "m"), id);
+    assert.doesNotMatch(out, /AirGuard/, id);
+  }
+});
+
+test("the old pack id \"airline\" is an alias for airlines, in the config and in resolvePack; unknown ids still fall back or are refused", () => {
+  assert.equal(resolvePack("airline"), "airlines");
+  assert.equal(resolvePack("banking"), "banking");
+  assert.equal(resolvePack("__proto__"), "__proto__");
+  assert.equal(resolvePack(5), 5);
+  assert.deepEqual(parseCustomerConfig('{"pack":"airline"}'), { org: null, pack: "airlines" });
+  assert.deepEqual(parseCustomerConfig('{"pack":"finance"}'), { org: null, pack: "airlines" }, "an unknown id falls back to the airline default");
+  assert.deepEqual(parseCustomerConfig('{"pack":"retail"}'), { org: null, pack: "retail" }, "a saved retail config keeps working");
 });
 
 async function withApp(opts, fn) {
@@ -81,7 +105,7 @@ test("GET /api/catalog tells the stories in the customer's default pack, or in ?
     assert.equal(dflt.status, 200);
     assert.equal(dflt.body.pack, "healthcare");
     assert.equal(dflt.body.org, "Acme Example");
-    assert.deepEqual(dflt.body.packs.map((p) => p.id), ["airline", "banking", "healthcare", "retail"]);
+    assert.deepEqual(dflt.body.packs.map((p) => p.id), ["airlines", "banking", "healthcare", "retail"]);
     assert.match(dflt.body.stories.hold, /^Acme Example runs a scheduling assistant\./);
     const retail = await get("?pack=retail");
     assert.equal(retail.body.pack, "retail");
@@ -92,12 +116,16 @@ test("GET /api/catalog tells the stories in the customer's default pack, or in ?
       const r = await get(q);
       assert.equal(r.status, 400, q);
       assert.equal(r.body.error, "unknown_pack", q);
-      assert.match(r.body.message, /one of airline, banking, healthcare, retail/);
+      assert.match(r.body.message, /one of airlines, banking, healthcare, retail/);
     }
+  });
+  await withApp({ customer: { org: null, pack: "airlines" } }, async (get) => {
+    assert.equal((await get("?pack=airline")).body.pack, "airlines", "the old id is accepted and answered under the new one");
+    assert.match((await get("")).body.stories.hold, /^AirGuard Airlines runs a rebooking assistant\./);
   });
   await withApp({}, async (get) => {
     const r = await get("");
     assert.equal(r.status, 200);
-    assert.ok(["airline", "banking", "healthcare", "retail"].includes(r.body.pack));
+    assert.ok(["airlines", "banking", "healthcare", "retail"].includes(r.body.pack));
   });
 });
