@@ -11,7 +11,7 @@ Usage: python3 take.py <work_dir>       (work_dir gets result.json, take.log and
 Env:   APP_URL (default http://127.0.0.1:7820) · PROFILE=monitor|laptop · REHEARSE=1 (fast dry run, no recording)
        REHEARSE_SHOTS=<dir> (with REHEARSE=1: one still per step, to read before a real take)
 """
-import json, os, shutil, subprocess, sys
+import json, os, shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 import captions
@@ -52,6 +52,7 @@ with sync_playwright() as p:
                               **({"record_video_dir": str(WORK / "pw-video"), "record_video_size": {"width": _prof["width"], "height": _prof["height"]}} if not REHEARSE else {}))
     ctx.add_init_script("window.__pillText = " + json.dumps("SAMPLE: simulated runs, not a live tenant") + ";")
     page = ctx.new_page()
+    t_page = time.time()      # the recording starts here; the opening slide shows a few seconds later (rule 29: the first frame must be the title)
     errors = []
     page.on("console", lambda m: log("CONSOLE", m.type, m.text) if m.type in ("warning", "error") else None)   # the engine says why a step stalled here
     page.on("pageerror", lambda e: (errors.append(str(e)), log("PAGEERROR:", e)))
@@ -62,6 +63,8 @@ with sync_playwright() as p:
     page.wait_for_selector("[data-testid=story-toggle-story]")
     page.click("[data-testid=story-toggle-story]")
     page.wait_for_selector("[data-testid=story-bar]")
+    page.wait_for_selector(".story-slide", state="visible")
+    lead_in = max(0.0, time.time() - t_page - 0.3)   # trimmed off the front of the film below
     page.wait_for_timeout(2000)
     log("sample recording started" if not REHEARSE else "rehearsal started")
 
@@ -128,11 +131,12 @@ with sync_playwright() as p:
             v = page.video.path(); ctx.close()
             out = WORK / "take-sample.webm"
             shutil.move(str(v), out)
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(out),
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{lead_in:.2f}", "-i", str(out),
                             "-vf", f"scale={_prof['width']}:-2", "-c:v", "libx264", "-preset", "veryfast",
                             "-crf", "20", "-pix_fmt", "yuv420p", "-an", str(WORK / "film.mp4")], check=True)
             out.unlink()
             result["video"] = str(WORK / "film.mp4")
+            result["lead_in_trimmed_s"] = round(lead_in, 2)
         browser.close()
 
 (WORK / "result.json").write_text(json.dumps(result, indent=2) + "\n")
