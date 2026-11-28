@@ -78,6 +78,8 @@ export const NOT_YET = [];
 export function buildSteps({ captions, host, doc = document, win = window, script = STEPS, notYet = NOT_YET }) {
   return script.filter((s) => !notYet.includes(s.key)).map((s) => {
     const step = { key: s.key, type: s.type, trigger: s.trigger, modes: s.modes, sampleKey: s.sampleKey, prefer: s.prefer, place: s.place, fixedSecs: s.fixedSecs, frameTimeoutMs: s.frameTimeoutMs, tab: s.tab };
+    // The press prompt (a button Play for me presses, and a viewer is told to press): the engine takes its run marker from the step that carries it.
+    if (s.prompt) step.prompt = s.prompt;
     if (s.type === 'bubble') step.target = s.target;
     return step;
   });
