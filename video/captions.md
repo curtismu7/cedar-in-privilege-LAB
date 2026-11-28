@@ -208,7 +208,7 @@ Eight console steps: sign in, Access Management, AI Policies, New Policy (name i
 Cedar is, and is not
 
 ## Text
-Cedar is a per-call rule engine that can narrow, with three actions. Console text says it is not authentication, not instant and not everything; it is believed not to be a grant, not the RequiredClaims gate and not a regex engine (UNVERIFIED, not tested here).
+Cedar is a per-call rule engine that can narrow, with three actions. Console text says it is not authentication, not instant and not everything.
 
 ---
 

@@ -64,7 +64,7 @@
   {
    "id": "required-claims",
    "term": "Required claims",
-   "definition": "Claims the gateway demands on the presented token, checked at sign-in on the identity or grant. Believed to do the same job as an act.sub policy, earlier (UNVERIFIED: not tested in this lab).",
+   "definition": "Claims the gateway demands on the presented token, checked at sign-in on the identity or grant.",
    "aliases": [
     "RequiredClaims"
    ]
@@ -175,7 +175,7 @@
   {
    "id": "card-is",
    "label": "What Cedar is and is not",
-   "description": "A per-call rule engine that can narrow, with three actions. Console text: not authentication, not instant, not everything. UNVERIFIED, believed and not tested here: not a grant, not the RequiredClaims gate, not a regex engine. Each line is labelled measured, console text or UNVERIFIED.",
+   "description": "A per-call rule engine that can narrow, with three actions. Console text: not authentication, not instant, not everything. Each line is labelled measured, console text or UNVERIFIED.",
    "group": "concept",
    "action": {
     "type": "route",
@@ -223,7 +223,7 @@
   {
    "id": "S05",
    "title": "Set up and limits",
-   "say": "Eight console steps, then what Cedar is and is not: a per-call rule engine that can narrow, not authentication (console text), and believed not to be a grant (UNVERIFIED). Every line says whether it is measured, console text or UNVERIFIED."
+   "say": "Eight console steps, then what Cedar is and is not: a per-call rule engine that can narrow, and not authentication (console text). Every line says whether it is measured, console text or UNVERIFIED."
   },
   {
    "id": "S06",

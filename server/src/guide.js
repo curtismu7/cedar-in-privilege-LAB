@@ -65,7 +65,6 @@ export const IS_IS_NOT = {
   lede: "For first-time users. Each line says where it comes from.",
   is: [
     t("console text", "A rule engine inside the gateway that decides each agent action, one tool call at a time."),
-    t("UNVERIFIED", "Narrowing only: a refusal always wins, and a policy never grants access that the agent's own grant does not allow. Not tested here; this lab's mock has no way to grant."),
     t("console text", "Three actions: mcp:Invoke (refuse the call), mcp:InvokeUnattended (hold the call for a human) and llm:Receive (withhold a reply)."),
     t("console text", "Able to read the token's scopes (context.token.scopes)."),
     t("measured", "Able to read a signed claim such as act.sub (context.token.claims), per one run with one real agent on 2026-11-16."),
@@ -73,9 +72,6 @@ export const IS_IS_NOT = {
   ],
   isNot: [
     t("console text", "Authentication. The gateway checks the token first; a policy only decides what an accepted caller may do."),
-    t("UNVERIFIED", "A grant. A policy narrows access; it does not give an agent a tool its own policy does not allow."),
-    t("UNVERIFIED", "The RequiredClaims claim gate. That gate sits earlier in the chain, on the identity or grant; the full demo app's notes record it as checked end to end for act.sub, which this lab did not re-run."),
-    t("UNVERIFIED", "A regex engine. The act.sub template tests the claim with .contains(); whether the real rule compares exactly, by substring or by set membership was not measured."),
     t("console text", "Instant. The documentation says a change can take about 4 minutes to reach the gateway; one observation on a real tenant showed 7 seconds (one observation, not a propagation time)."),
     t("console text", "Everything. Principal attributes, a raw groups claim and an ID-JAG hook were not found in the console on 2026-10-20 and were not re-checked.")
   ]

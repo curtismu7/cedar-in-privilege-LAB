@@ -19,7 +19,7 @@ Cedar is the policy language Privilege uses for its AI policies. This lab runs n
 Below the tour:
 
 - **Set up Cedar in Privilege**: the eight console steps (sign in, Access Management then AI Policies, New Policy, name it and pick Candidate, pick a template, read the "Cedar this will save" preview, Create Policy and read Validation & Stages, Enforce, wait and test). Every line is labelled `measured`, `console text` or `UNVERIFIED`.
-- **What Cedar is, and is not**: a per-call rule engine inside the gateway that can narrow, with three actions (`mcp:Invoke` refuse, `mcp:InvokeUnattended` hold for a human, `llm:Receive` withhold a reply); console text: not authentication, not instant, not everything; UNVERIFIED (believed, not tested here): not a grant, not the RequiredClaims claim gate, not a regex engine. Each line is labelled.
+- **What Cedar is, and is not**: a per-call rule engine inside the gateway that can narrow, with three actions (`mcp:Invoke` refuse, `mcp:InvokeUnattended` hold for a human, `llm:Receive` withhold a reply); console text: not authentication, not instant, not everything. Each line is labelled.
 
 Every call shows **What the mock door did (simulated)** (the family's shared trace panel, relabelled for this lab through its title and basis-note props): the request, the reply, and the two checks in between (sign-in, AI policy), each marked `checked` because the lab's own mock door computed it. A hold is an `info` decision (it waits for a human), never a pass. It is not Privilege.
 
@@ -27,7 +27,7 @@ Every call shows **What the mock door did (simulated)** (the family's shared tra
 
 - The mock door is an in-process **evaluator of five rule shapes** (hold, token scope, agent act.sub, a claim, a blocked tool), each compared exactly. It is **not a Cedar engine** and it **decides nothing real**.
 - **Only the act.sub case has a measured result**: one real agent, two Active policies, one refusal. The hold and scope cases are simulated; nothing here is a measurement of them. The hold's reply (HTTP 202 and its body), how the real gateway tells an unattended call apart, and how a PingFederate token's scopes reach the policy are all UNVERIFIED.
-- Not measured, whichever case: a second real agent with a different act.sub, act emitted as text, the no-token wording, a Candidate not being enforced (console documentation, not re-run), whether the real rule compares exactly, by substring or by set membership. RequiredClaims is believed to do the same job earlier, at sign-in (UNVERIFIED, not tested here).
+- Not measured, whichever case: a second real agent with a different act.sub, act emitted as text, the no-token wording, a Candidate not being enforced (console documentation, not re-run), whether the real rule compares exactly, by substring or by set membership.
 - Timing: in one run on 2026-11-16 the first poll, about 7 seconds after the policies were created, already showed the refusal. That is one observation, not a measured or guaranteed propagation time. The documentation says a change can take about 4 minutes to reach the gateway.
 - Example ids only (`agent-client-example`, `agent-b-example`, `approver-example`, `door-example`, example scopes, `.example` hosts). The mock token of a run is shown whole and labelled mock-issued (an HS256 fixture JWT that signs nothing real, rule 4).
 
