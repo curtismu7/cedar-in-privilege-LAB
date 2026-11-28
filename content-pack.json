@@ -72,7 +72,7 @@
   {
    "id": "mock-door",
    "term": "Mock door",
-   "definition": "This lab in-process stand-in for the Privilege gateway. It evaluates three rule shapes (hold, scope, act.sub), each compared exactly. It is not a Cedar engine and it decides nothing real.",
+   "definition": "This lab in-process stand-in for the Privilege gateway. It evaluates five rule shapes (hold, scope, act.sub, claim, block), each compared exactly. It is not a Cedar engine and it decides nothing real.",
    "aliases": [
     "simulated gateway"
    ]
@@ -93,7 +93,7 @@
    "title": "Cedar policy language",
    "url": "https://docs.cedarpolicy.com/",
    "kind": "vendor-docs",
-   "use": "The policy language behind the AI policies; the lab uses three rule shapes only.",
+   "use": "The policy language behind the AI policies; the lab uses five rule shapes only.",
    "status": "not-read",
    "checked": "2026-11-16"
   }

@@ -2,15 +2,17 @@
 
 Tier: Demo
 
-**Cedar in Privilege: a guided tour of how Cedar AI policies work in PingOne Privilege, with three cases, a set-up guide and a "what Cedar is and is not" panel.**
+**Cedar in Privilege: a guided tour of how Cedar AI policies work in PingOne Privilege, with nine cases, a set-up guide and a "what Cedar is and is not" panel.**
 
-Cedar is the policy language Privilege uses for its AI policies. This lab runs three cases against a **mock** Privilege door, in-process, with a mock PingFederate token. Structure copied from cedar-act-sub-LAB, the lab that holds the owner-run real probe for the act.sub case; its scenario content is replaced by this lab's three cases, generalised from one rule shape to three.
+Cedar is the policy language Privilege uses for its AI policies. This lab runs nine cases against a **mock** Privilege door, in-process, with a mock PingFederate token. Structure copied from cedar-act-sub-LAB, the lab that holds the owner-run real probe for the act.sub case; its scenario content is replaced by this lab's three cases, generalised from one rule shape to three.
 
 ## What the page walks
 
 1. **Hold for a human.** A `forbid` on `mcp:InvokeUnattended` with an `unless approval_count >= 1` clause holds the call: it is not refused, it waits, and an approval id comes back. A simulated approval is recorded, the agent retries, and the call goes through. Source: console text (the shape of the live HITL policy copy in the full demo app's notes, read from a console on 2026-10-22, not re-run here). **Simulated** in this lab; its real counterpart is the Privilege AI Policies page of the full demo app.
 2. **Token-scope gate.** A `forbid ... unless context.token.scopes.contains("<scope>")` refuses a token without the scope and allows one with it. Source: console text (the live scope policy copy and the console template, recorded in the full demo app's notes, not re-run here). Whether a PingFederate token's scope reaches the policy was not tested there (UNVERIFIED). **Simulated** here; its real counterpart is the PingFederate Token Demo page of the full demo app.
 3. **Agent act.sub gate.** The measured case. Two tools, one act.sub policy each: the tool whose policy names this agent is allowed, the tool whose policy names a different value is refused (`action denied by policy: ListIndexTool requires act.sub to be agent-b-example`, JSON-RPC -32600; HTTP 400 on the mock). Measured on a real tenant on 2026-11-16 with one real agent; the **Measured** card on the page is that evidence, kept apart from the mock runs. A Candidate scenario (simulated, per the console documentation, not re-run) shows that a Candidate is not enforced.
+
+**More Cedar cases (5 to 9).** Beyond hold, scope and act.sub: **Claims we protect** (a tool needs a claim the issuer signed into the token; a claim the agent adds to its own token breaks the signature and is refused at sign-in, and a claim it only mentions in words is not in the token), **the user behind the token** (`sub`), **a group in a list claim**, **block a tool outright** (a forbid with no condition) and **layered policies** (every forbid must be satisfied, the first unmet one names the refusal). All simulated; how a real door reads a custom claim, the user or a list claim is UNVERIFIED. Spec: `docs/specs/2026-11-28-more-cedar-cases.md`.
 
 **Ask the agent** (step 3 of the Tour). Pick a scenario (it sets the door's policies), type a prompt and send it. A **scripted agent** (a small keyword planner: `count`, `list`, `search`; no model, no network) turns the words into `tools/call`s to the mock door. The page shows the conversation (prompt, plan, each call's verdict, the agent's reply), the Cedar of the policies on the door, and **API calls and responses**: the token request to the mock PingFederate, then each JSON-RPC request and the door's reply with its two checks. A held call offers "Approve (simulated)" (with the mock PingID factor in the step-up scenarios) and the agent retries. The prompt only chooses tools: the door setup (policies, token, attended or unattended call) comes from the scenario, so no typed word changes a policy, a token or the action a policy matches. `POST /api/agent/ask {prompt, scenario, approved?, stepUp?}`; prompt 1 to 280 characters. Cedar's own site and language reference are linked from the Tour intro.
 
@@ -23,7 +25,7 @@ Every call shows **What the mock door did (simulated)** (the family's shared tra
 
 ## Honest scope
 
-- The mock door is an in-process **evaluator of three rule shapes** (hold, token scope, agent act.sub), each compared exactly. It is **not a Cedar engine** and it **decides nothing real**.
+- The mock door is an in-process **evaluator of five rule shapes** (hold, token scope, agent act.sub, a claim, a blocked tool), each compared exactly. It is **not a Cedar engine** and it **decides nothing real**.
 - **Only the act.sub case has a measured result**: one real agent, two Active policies, one refusal. The hold and scope cases are simulated; nothing here is a measurement of them. The hold's reply (HTTP 202 and its body), how the real gateway tells an unattended call apart, and how a PingFederate token's scopes reach the policy are all UNVERIFIED.
 - Not measured, whichever case: a second real agent with a different act.sub, act emitted as text, the no-token wording, a Candidate not being enforced (console documentation, not re-run), whether the real rule compares exactly, by substring or by set membership. RequiredClaims is believed to do the same job earlier, at sign-in (UNVERIFIED, not tested here).
 - Timing: in one run on 2026-11-16 the first poll, about 7 seconds after the policies were created, already showed the refusal. That is one observation, not a measured or guaranteed propagation time. The documentation says a change can take about 4 minutes to reach the gateway.
@@ -54,7 +56,7 @@ The "What the mock door did (simulated)" panel is the family's shared trace pane
 ```bash
 npm ci
 npm test          # server (node --test) + web (vitest) + repo checks
-npm run doctor    # spins a throwaway server on 17820 and proves the three cases
+npm run doctor    # spins a throwaway server on 17820 and proves the cases
 npm run build     # vite build -> dist/
 npm start         # http://localhost:7820
 ```
@@ -75,6 +77,6 @@ Port 7820 and catalog id D135 are provisional placeholders (the shelf registry h
 
 ## Tests
 
-- `test/*.test.js` (node --test): every scenario's exact verdict, status and message, the three rule shapes and their edges, hostile input, the Host and Origin guards, strict `/api/mode`, the honesty hedges, vendored pins, the content pack, netguard.
+- `test/*.test.js` (node --test): every scenario's exact verdict, status and message, the five rule shapes and their edges, hostile input, the Host and Origin guards, strict `/api/mode`, the honesty hedges, vendored pins, the content pack, netguard.
 - `test/*.test.jsx` and the vendored `web/src/gateway-trace/gateway-trace.test.jsx` (vitest): the page, the shared TopMenu, the disabled Real toggle and its reason, the trace panel, the diagram.
 - `npm run test:repo`: forbidden-identifier scan and the vendored file pins.

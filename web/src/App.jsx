@@ -204,7 +204,7 @@ export default function App() {
           <div className="tab-pane" data-testid={`pane-flow`} hidden={section !== "flow"}>
             <section className="card intro" data-testid="intro">
               <h1><span className="step-num" data-n="1" aria-hidden="true" />How Cedar AI policies work in PingOne Privilege</h1>
-              <p>Cedar is an open-source policy language and specification (<a href={CEDAR_SITE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-site">cedarpolicy.com</a>, <a href={CEDAR_REFERENCE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-reference">policy language reference</a>), and the language Privilege uses for its AI policies. A guided tour of three cases: a call held for a human, a token-scope gate, and an agent act.sub gate. Pick a case, then type a prompt to an agent and watch what it sends to the door and what comes back. Each case is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. The other tabs: how to set Cedar up in the console, and what Cedar is and is not.</p>
+              <p>Cedar is an open-source policy language and specification (<a href={CEDAR_SITE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-site">cedarpolicy.com</a>, <a href={CEDAR_REFERENCE} target="_blank" rel="noopener noreferrer" data-testid="cedar-link-reference">policy language reference</a>), and the language Privilege uses for its AI policies. A guided tour of nine cases: a call held for a human, a token-scope gate, an agent act.sub gate, the approver's step-up, the claims we protect, the user, a group, a blocked tool and layered policies. Pick a case, then type a prompt to an agent and watch what it sends to the door and what comes back. Each case is simulated here in a mock door; only the act.sub case has a result measured on a real tenant. The other tabs: how to set Cedar up in the console, and what Cedar is and is not.</p>
               {data && <p className="hint">{data.mockNote}</p>}
             </section>
             {presenter && (
@@ -213,7 +213,7 @@ export default function App() {
               </aside>
             )}
             <section className="card tour-section" data-testid="tour-cases">
-              <h2><span className="step-num" data-n="2" aria-hidden="true" />The tour: three cases</h2>
+              <h2><span className="step-num" data-n="2" aria-hidden="true" />The tour: the cases</h2>
               <ScenarioPicker cases={(data && data.cases) || []} scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} stories={data && data.stories} packs={data && data.packs} pack={data && data.pack} onPack={setPack} plain />
             </section>
             <section className="card tour-section" data-testid="tour-ask">

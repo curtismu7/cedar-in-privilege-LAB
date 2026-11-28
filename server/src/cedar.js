@@ -1,4 +1,4 @@
-// The mock Privilege door. It evaluates THREE rule shapes, each a `forbid ... unless` (or `when`) policy as the Privilege AI Policy editor
+// The mock Privilege door. It evaluates FIVE rule shapes, each a `forbid ... unless` (or `when`) policy as the Privilege AI Policy editor
 // writes them. It is NOT a Cedar engine and it decides nothing real: any other policy text is out of scope here.
 //
 // The shapes, and where each one comes from (labels used on the page):
@@ -9,6 +9,11 @@
 //           Simulated.
 //   actsub  action mcp:Invoke, unless the token's claims have act.sub and it contains("<agent>"). The only shape with a MEASURED real result
 //           (2026-11-16, one real agent, see EVIDENCE in scenarios.js); the lines around the contains(...) test are UNVERIFIED.
+//   claim   action mcp:Invoke, unless the token's claims have "<claim>" and it contains("<value>"). The generic form of actsub: the same
+//           console template ("Restrict a tool to tokens carrying a claim"), with any claim name (a custom claim, the user in `sub`, a list
+//           claim such as `groups`). SIMULATED; how the real door reads a custom claim, `sub` or a list claim from a PingFederate token was not
+//           tested (UNVERIFIED), and the lines around the contains(...) test are this lab's reconstruction.
+//   block   action mcp:Invoke, no `unless`: the tool is refused for every token. SIMULATED; the shape is the forbid line of the others.
 // Door scoping (`context.app == "<door>"`) is only shown in the text: the mock has no door argument and does not evaluate it.
 
 export const DOOR = "door-example";
@@ -30,18 +35,29 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
 export const SHAPES = {
   hold: { action: ACTION_UNATTENDED, valueName: "approver" },
   scope: { action: ACTION_INVOKE, valueName: "scope" },
-  actsub: { action: ACTION_INVOKE, valueName: "agent" }
+  actsub: { action: ACTION_INVOKE, valueName: "agent" },
+  claim: { action: ACTION_INVOKE, valueName: "claim value" },
+  block: { action: ACTION_INVOKE, valueName: null }
 };
 
-// One policy. `value` is the approver id (hold), the scope (scope) or the agent id (actsub).
-export function makePolicy({ id, shape, tool, value, state = "Active" }) {
-  if (!Object.hasOwn(SHAPES, shape)) throw new Error("shape must be hold, scope or actsub");
-  if (![id, tool, value].every((v) => typeof v === "string" && SAFE_ID.test(v))) throw new Error("id, tool and value must be plain ids");
+// Claim names that make up the token's own envelope: a scenario may add other claims to a mock token, never these.
+export const RESERVED_CLAIMS = ["iss", "aud", "exp", "iat", "client_id", "mock", "scope", "act"];
+
+// One policy. `value` is the approver id (hold), the scope (scope), the agent id (actsub) or the claim's value (claim, with `claim` the claim's
+// name); a block has neither.
+export function makePolicy({ id, shape, tool, value, claim, state = "Active" }) {
+  if (!Object.hasOwn(SHAPES, shape)) throw new Error("shape must be hold, scope, actsub, claim or block");
+  const plain = (v) => typeof v === "string" && SAFE_ID.test(v);
+  if (!plain(id) || !plain(tool)) throw new Error("id, tool and value must be plain ids");
+  if (shape !== "block" && !plain(value)) throw new Error("id, tool and value must be plain ids");
+  if (shape === "claim" && !plain(claim)) throw new Error("the claim name must be a plain id");
   if (state !== "Active" && state !== "Candidate") throw new Error("state must be Active or Candidate");
   const reason = shape === "hold" ? `${tool} needs a human approval`
     : shape === "scope" ? `${tool} requires the ${value} scope`
-      : `${tool} requires act.sub to be ${value}`;
-  return { id, shape, tool, state, action: SHAPES[shape].action, value, reason };
+      : shape === "claim" ? `${tool} requires the ${claim} claim to contain ${value}`
+        : shape === "block" ? `${tool} is blocked on this door`
+          : `${tool} requires act.sub to be ${value}`;
+  return { id, shape, tool, state, action: SHAPES[shape].action, value: shape === "block" ? undefined : value, ...(shape === "claim" ? { claim } : {}), reason };
 }
 
 // The exact Cedar text of one policy, as this lab generates it from its shape.
@@ -53,6 +69,16 @@ export function cedarText(p) {
   }
   if (p.shape === "scope") {
     return [`@reason("${p.reason}")`, head, when, `unless { context has token && context.token.scopes.contains("${p.value}") };`].join("\n");
+  }
+  if (p.shape === "block") return [`@reason("${p.reason}")`, head, `when   { context.app == "${DOOR}" };`].join("\n");
+  if (p.shape === "claim") {
+    return [
+      `@reason("${p.reason}")`,
+      head,
+      when,
+      `unless { context.token.claims has "${p.claim}"`,
+      `         && context.token.claims["${p.claim}"].contains("${p.value}") };`
+    ].join("\n");
   }
   return [
     `@reason("${p.reason}")`,
@@ -100,6 +126,12 @@ export function policyForbids(p, { tool, action, claims, approvals = 0 }) {
   if (p.state !== "Active" || p.tool !== tool || p.action !== action) return false;
   if (p.shape === "hold") return !(Number.isInteger(approvals) && approvals >= 1);
   if (p.shape === "scope") return !claimScopes(claims).includes(p.value);
+  if (p.shape === "block") return true;
+  if (p.shape === "claim") {
+    // An own property of the token's claims only: `__proto__`, `constructor` and the like are not claims. A missing claim fails closed.
+    const has = claims && Object.prototype.hasOwnProperty.call(claims, p.claim);
+    return !(has && contains(claims[p.claim], p.value));
+  }
   const actSub = claimActSub(claims);
   return !(actSub !== undefined && contains(actSub, p.value));
 }
@@ -183,5 +215,6 @@ export function callTool({ token, tool, action = ACTION_INVOKE, approvals = 0, p
 function satisfied(p, claims, approvals) {
   if (p.shape === "hold") return `${approvals} approval${approvals === 1 ? "" : "s"} on record, approval_count >= 1`;
   if (p.shape === "scope") return `the token's scopes include ${p.value}`;
+  if (p.shape === "claim") return `the token's ${p.claim} claim contains ${p.value}`;
   return "the token's act.sub matched";
 }

@@ -72,8 +72,13 @@ export default function RunResult({ result }) {
         <details open>
           <summary>Mock token and its claims</summary>
           <p className="hint" data-testid="mock-token-label">
-            <span className="chip basis-unmeasured">mock-issued</span> Issued by this lab's in-process PingFederate stand-in (HS256 fixture key);
-            it signs nothing real. <CopyButton text={result.token.token} />
+            {result.token.edited ? (
+              <><span className="chip basis-unmeasured">mock, edited by the agent</span> The agent changed this token after this lab's in-process PingFederate stand-in signed it, so its signature no longer matches.{" "}</>
+            ) : (
+              <><span className="chip basis-unmeasured">mock-issued</span> Issued by this lab's in-process PingFederate stand-in (HS256 fixture key);
+              it signs nothing real.{" "}</>
+            )}
+            <CopyButton text={result.token.token} />
           </p>
           <Json value={result.token.token} label="Mock token" testId="mock-token" />
           <Json value={result.token.claims} label="Token claims (mock)" testId="token-claims" hot={["act", "sub", "scope", "mock"]} />

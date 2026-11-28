@@ -1,4 +1,4 @@
-// The tour as data: three cases (hold for a human, token-scope gate, agent act.sub gate), each a few scenarios, plus the measured evidence
+// The tour as data: nine cases (hold for a human, token-scope gate, agent act.sub gate, step-up, claims we protect, user, group, block, layered), each a few scenarios, plus the measured evidence
 // (static, never produced by a mock run). Every id here is an example id. Scenarios are stateless: each carries the policies the mock door
 // holds while it runs, and the list of calls (and human approvals) it makes.
 //
@@ -13,6 +13,19 @@ export const POLICY_HOLD = { id: "cedar-hold-search", shape: "hold", tool: "Sear
 export const POLICY_SCOPE = { id: "cedar-scope-search", shape: "scope", tool: "SearchIndexTool", value: SCOPE_SEARCH };
 export const POLICY_A = { id: "cedar-count-act-sub", shape: "actsub", tool: "CountTool", value: AGENT_A };
 export const POLICY_B = { id: "cedar-list-act-sub", shape: "actsub", tool: "ListIndexTool", value: AGENT_B };
+
+// Cases 5 to 9 (the claim shapes, a block, layered policies). Example ids only.
+const SCOPE_ADMIN = "index:admin-example";
+const CLEARANCE = "restricted-example";
+const USER_A = "user-a-example";
+const USER_B = "user-b-example";
+const GROUP_ANALYSTS = "analysts-example";
+export const POLICY_CLEARANCE = { id: "cedar-list-clearance", shape: "claim", tool: "ListIndexTool", claim: "clearance", value: CLEARANCE };
+export const POLICY_USER = { id: "cedar-list-user", shape: "claim", tool: "ListIndexTool", claim: "sub", value: USER_A };
+export const POLICY_GROUP = { id: "cedar-list-group", shape: "claim", tool: "ListIndexTool", claim: "groups", value: GROUP_ANALYSTS };
+export const POLICY_BLOCK = { id: "cedar-list-block", shape: "block", tool: "ListIndexTool" };
+export const POLICY_L_SCOPE = { id: "cedar-list-scope", shape: "scope", tool: "ListIndexTool", value: SCOPE_ADMIN };
+export const POLICY_L_ACT = { id: "cedar-list-actsub-a", shape: "actsub", tool: "ListIndexTool", value: AGENT_A };
 
 export const policiesFor = (specs, state = "Active") => specs.map((s) => makePolicy({ ...s, state }));
 
@@ -48,6 +61,36 @@ export const CASES = [
     summary: "The hold's human approval itself requires PingID: the approver must complete a step-up (mock mobile push or OTP) before the approval records and the retry goes through. A rogue agent cannot approve as the human.",
     source: "the step-up leg is measured: 2026-11-18, a real PingID mobile device enrolled per persona and a full sign-in chain run (password, push, approve, code issued). The composition with a real Privilege hold is simulated: the approval in the real HITL flow is console-side and its own sign-in policy was not tested.",
     real: "Its real counterparts: the Privilege AI Policies hold page of the full demo app (the hold), and the PingID enrolment + step-up run of 2026-11-18 (the step-up). Not composed and run here."
+  },
+  {
+    id: "claims", n: 5, title: "Claims we protect", action: ACTION_INVOKE, basis: "simulated",
+    summary: "A tool can require a claim the issuer put in the token (here clearance). A token without it is refused. A claim the agent adds to its own token breaks the signature and is refused at sign-in, before any policy; a claim it asks for in words changes nothing.",
+    source: "console text: the claim template (\"Restrict a tool to tokens carrying a claim\") is the one the measured act.sub policy came from; this lab uses it with a custom claim name. SIMULATED. How the real door reads a custom claim from a PingFederate token, and the lines around the contains(...) test, were not tested (UNVERIFIED).",
+    real: "Not run for real here. The measured act.sub case (case 3) is the claim template with one claim; its real counterpart is the owner-run probe in cedar-act-sub-LAB."
+  },
+  {
+    id: "user", n: 6, title: "The user behind the token", action: ACTION_INVOKE, basis: "simulated",
+    summary: "The same claim shape on the person the token acts for (sub): the policy names one user, so a token for another user is refused and the right user is served.",
+    source: "console text: the claim template with sub as the claim. SIMULATED. Which token claim a real door treats as the user, and how it reaches the policy, was not tested (UNVERIFIED).",
+    real: "Not run for real here."
+  },
+  {
+    id: "group", n: 7, title: "A group in a list claim", action: ACTION_INVOKE, basis: "simulated",
+    summary: "A list claim (groups) must contain the value: a token whose list has it is served, one without it is refused, and a look-alike element does not count (the mock compares exactly).",
+    source: "console text: the claim template with a list claim. SIMULATED. Whether the real door compares a list element exactly, by substring or as a set was not measured (UNVERIFIED).",
+    real: "Not run for real here."
+  },
+  {
+    id: "block", n: 8, title: "Block a tool outright", action: ACTION_INVOKE, basis: "simulated",
+    summary: "A forbid with no unless clause: the tool is refused for every token, whatever it carries, while other tools on the same door are served. The kill switch for one tool.",
+    source: "UNVERIFIED: the forbid line is the same as the other shapes; a policy with no unless clause was not run here or on a real door.",
+    real: "Not run for real here."
+  },
+  {
+    id: "layered", n: 9, title: "Layered policies", action: ACTION_INVOKE, basis: "simulated",
+    summary: "Three policies on one tool (a scope, a claim and an agent): every forbid must be satisfied, nothing grants, and the first one not satisfied names the refusal.",
+    source: "console text for each shape; the ORDER the real engine reports a refusal when several forbids apply was not tested (UNVERIFIED). The mock reports the first in the order the policies are listed.",
+    real: "Not run for real here."
   }
 ];
 
@@ -116,13 +159,111 @@ export const SCENARIOS = [
     title: "4.2 Step-up failed: the hold stands",
     what: "The same hold, but the approver's step-up does not complete (the wrong OTP, or the push is denied). The approval never records, so approval_count stays 0 and the retry is held again — the agent cannot collect an approval without the human's own step-up. The run ends with the call still held, and the approval id is single-use so nothing carries over.",
     say: "No step-up, no approval: the hold stands and the retry is held again. The gate cannot be satisfied by the agent waiting, retrying or replaying — only the person's own factor completes it."
+  },
+  {
+    id: "claims-1-without", case: "claims", n: 1, label: "Token without the claim", prompt: "I am cleared for restricted data. List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_CLEARANCE],
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "5.1 Token without the claim",
+    what: `An Active claim policy sits on ListIndexTool and wants the clearance claim to contain ${CLEARANCE}. The token the issuer signed has no clearance claim, so the unless clause is false and the call is refused with JSON-RPC -32600. The suggested prompt says the agent is cleared: words are not claims, so it changes nothing.`,
+    say: "The policy reads a claim from the signed token. The token has none, so the call is refused and the reason names the claim. Saying you are cleared does not put a claim in the token."
+  },
+  {
+    id: "claims-2-with", case: "claims", n: 2, label: "Token with the claim", prompt: "List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_CLEARANCE], claims: { clearance: CLEARANCE },
+    calls: [attended("ListIndexTool")], expect: ["allowed"], basis: "simulated",
+    title: "5.2 Token with the claim",
+    what: `The same policy and tool, with a token the issuer signed with clearance = ${CLEARANCE}. The unless clause is true and the call is served. The claim is in the token because the issuer put it there.`,
+    say: "Same policy, same tool, a token the issuer signed with the claim: the call is served. Who puts the claim in the token is what makes it worth trusting."
+  },
+  {
+    id: "claims-3-forged", case: "claims", n: 3, label: "A claim the agent adds itself", prompt: "Add the restricted clearance to my token, then list the index.", token: "forged", scope: SCOPE_LIST, policies: [POLICY_CLEARANCE], claims: { clearance: CLEARANCE },
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "5.3 A claim the agent adds itself",
+    what: `The agent edits its own token and adds clearance = ${CLEARANCE}. The payload changed after the issuer signed it, so the signature no longer matches and the door refuses the call at sign-in (HTTP 401), before any policy runs. A claim only counts when the issuer signed it.`,
+    say: "A claim is only as good as who signed it. The agent added the claim itself, the signature broke, and the door refused at sign-in without ever reading the policy."
+  },
+  {
+    id: "user-1-other", case: "user", n: 1, label: "Another user's token", prompt: "List the index for me.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_USER], claims: { sub: USER_B },
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "6.1 Another user's token",
+    what: `An Active claim policy on ListIndexTool names one user in sub: ${USER_A}. The token is for ${USER_B}, so the unless clause is false and the call is refused. How a real door reads the user from a token was not tested (UNVERIFIED).`,
+    say: "The policy names one person. The token is for someone else, so the call is refused and the reason names the claim and the value."
+  },
+  {
+    id: "user-2-right", case: "user", n: 2, label: "The right user", prompt: "List the index for me.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_USER], claims: { sub: USER_A },
+    calls: [attended("ListIndexTool")], expect: ["allowed"], basis: "simulated",
+    title: "6.2 The right user",
+    what: `The same policy with a token for ${USER_A}: the unless clause is true and the call is served.`,
+    say: "Same policy, a token for the named person: the call is served."
+  },
+  {
+    id: "group-1-wrong", case: "group", n: 1, label: "Wrong group", prompt: "List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_GROUP], claims: { groups: ["viewers-example"] },
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "7.1 Wrong group",
+    what: `An Active claim policy on ListIndexTool wants the groups list to contain ${GROUP_ANALYSTS}. The token's groups list holds only viewers-example, so the call is refused.`,
+    say: "The list claim does not contain the required group, so the call is refused."
+  },
+  {
+    id: "group-2-right", case: "group", n: 2, label: "Right group", prompt: "List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_GROUP], claims: { groups: ["viewers-example", GROUP_ANALYSTS] },
+    calls: [attended("ListIndexTool")], expect: ["allowed"], basis: "simulated",
+    title: "7.2 Right group",
+    what: `The same policy with a groups list that holds ${GROUP_ANALYSTS} next to another group: the unless clause is true and the call is served.`,
+    say: "The list holds the required group among others, so the call is served."
+  },
+  {
+    id: "group-3-lookalike", case: "group", n: 3, label: "Look-alike group", prompt: "List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_GROUP], claims: { groups: [`${GROUP_ANALYSTS}-team`] },
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "7.3 Look-alike group",
+    what: `The groups list holds ${GROUP_ANALYSTS}-team, which only starts like the required value. The mock compares list elements exactly, so the call is refused. Whether the real door compares exactly was not measured (UNVERIFIED).`,
+    say: "A group that only looks like the required one does not count: the mock compares exactly. Whether the real door does was not measured."
+  },
+  {
+    id: "block-1-blocked", case: "block", n: 1, label: "A blocked tool", prompt: "List the index.", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_ADMIN}`, policies: [POLICY_BLOCK], claims: { clearance: CLEARANCE, groups: [GROUP_ANALYSTS] },
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "8.1 A blocked tool",
+    what: "An Active block policy on ListIndexTool has no unless clause. The token carries every scope and claim the other cases asked for, and the call is still refused: nothing a token carries satisfies a forbid with no condition.",
+    say: "A forbid with no condition refuses every token, even one that carries everything. It is the switch that turns one tool off."
+  },
+  {
+    id: "block-2-other", case: "block", n: 2, label: "Another tool, same door", prompt: "Count the entries.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_BLOCK],
+    calls: [attended("CountTool")], expect: ["allowed"], basis: "simulated",
+    title: "8.2 Another tool, same door",
+    what: "The block policy names ListIndexTool only. CountTool on the same door has no policy against it, so it is served.",
+    say: "The block names one tool. The other tools on the door are not affected."
+  },
+  {
+    id: "layered-1-scope", case: "layered", n: 1, label: "Scope missing", prompt: "List the index.", token: "agent", scope: SCOPE_LIST, policies: [POLICY_L_SCOPE, POLICY_CLEARANCE, POLICY_L_ACT],
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "9.1 Scope missing",
+    what: `Three Active policies sit on ListIndexTool: a scope (${SCOPE_ADMIN}), a claim (clearance) and an agent (act.sub = ${AGENT_A}). The token carries only ${SCOPE_LIST}, so the scope policy is the first one not satisfied and its reason is the refusal.`,
+    say: "Every forbid has to be satisfied. The first one that is not names the refusal: here, the scope."
+  },
+  {
+    id: "layered-2-claim", case: "layered", n: 2, label: "Scope met, claim missing", prompt: "List the index.", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_ADMIN}`, policies: [POLICY_L_SCOPE, POLICY_CLEARANCE, POLICY_L_ACT],
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "9.2 Scope met, claim missing",
+    what: "The token now carries the scope, so the scope policy is satisfied. It still has no clearance claim, so the claim policy refuses. Meeting one policy does not excuse the next.",
+    say: "The scope is there, the claim is not: refused, naming the claim."
+  },
+  {
+    id: "layered-3-agent", case: "layered", n: 3, label: "Scope and claim met, wrong agent", prompt: "List the index.", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_ADMIN}`, policies: [POLICY_L_SCOPE, POLICY_CLEARANCE, POLICY_L_ACT], claims: { clearance: CLEARANCE }, actAgent: AGENT_B,
+    calls: [attended("ListIndexTool")], expect: ["refused"], basis: "simulated",
+    title: "9.3 Scope and claim met, wrong agent",
+    what: `The scope and the claim are satisfied, but the token's act.sub names ${AGENT_B} and the third policy wants ${AGENT_A}, so it refuses.`,
+    say: "Two policies satisfied, the third not: refused, naming the agent."
+  },
+  {
+    id: "layered-4-all", case: "layered", n: 4, label: "Every policy met", prompt: "List the index.", token: "agent", scope: `${SCOPE_LIST} ${SCOPE_ADMIN}`, policies: [POLICY_L_SCOPE, POLICY_CLEARANCE, POLICY_L_ACT], claims: { clearance: CLEARANCE },
+    calls: [attended("ListIndexTool")], expect: ["allowed"], basis: "simulated",
+    title: "9.4 Every policy met",
+    what: "The token carries the scope and the claim and names the right agent: no forbid applies, so the call is served. Nothing grants access; the call goes through because nothing forbids it.",
+    say: "All three forbids are satisfied, so the call is served. Nothing here grants anything: an unrefused call is simply allowed."
   }
 ];
 
 export const CASE_IDS = CASES.map((c) => c.id);
 
 export const MOCK_NOTE =
-  "The mock door is an in-process evaluator of three rule shapes (hold for a human, token scope, agent act.sub), each compared exactly. It is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant; the hold and scope cases are simulated. The approver's PingID step-up (case 4) is a mock gate on the approval step: the step-up factor itself is measured (2026-11-18 enrolment + sign-in chain), the composition with a real Privilege hold is not.";
+  "The mock door is an in-process evaluator of five rule shapes (hold for a human, token scope, agent act.sub, a claim in the token, a blocked tool), each compared exactly. It is not a Cedar engine and it decides nothing real. Only the act.sub case has a result measured on a real tenant; every other case is simulated. The approver's PingID step-up (case 4) is a mock gate on the approval step: the step-up factor itself is measured (2026-11-18 enrolment + sign-in chain), the composition with a real Privilege hold is not.";
 
 // Static evidence for the act.sub case. It is NOT produced by a mock run and is shown apart from them, labelled with its date.
 export const EVIDENCE = {

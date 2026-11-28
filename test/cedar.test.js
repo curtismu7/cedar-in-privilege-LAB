@@ -301,8 +301,11 @@ test("every scenario's verdicts match what its data says, every call count match
     if (s.case !== "actsub") assert.equal(s.matchesMeasured, undefined, `${s.id}: only the act.sub case has a measured result`);
   }
   assert.deepEqual(SCENARIOS.filter((s) => s.matchesMeasured === true).map((s) => s.id), ["actsub-1-baseline", "actsub-2-gate"]);
-  assert.deepEqual(CASES.map((c) => [c.id, c.basis]), [["hold", "simulated"], ["scope", "simulated"], ["actsub", "measured once"], ["stepup", "simulated (approval leg measured separately)"]]);
-  assert.deepEqual(SCENARIOS.map((s) => s.id), ["hold-1-held", "hold-2-approve", "scope-1-without", "scope-2-with", "actsub-1-baseline", "actsub-2-gate", "actsub-3-candidate", "stepup-1-approve", "stepup-2-refused"]);
+  assert.deepEqual(CASES.map((c) => [c.id, c.basis]), [["hold", "simulated"], ["scope", "simulated"], ["actsub", "measured once"], ["stepup", "simulated (approval leg measured separately)"],
+    ["claims", "simulated"], ["user", "simulated"], ["group", "simulated"], ["block", "simulated"], ["layered", "simulated"]]);
+  // The first nine are the original tour and stay in place; cases 5 to 9 follow (spec 2026-11-28-more-cedar-cases.md).
+  assert.deepEqual(SCENARIOS.slice(0, 9).map((s) => s.id), ["hold-1-held", "hold-2-approve", "scope-1-without", "scope-2-with", "actsub-1-baseline", "actsub-2-gate", "actsub-3-candidate", "stepup-1-approve", "stepup-2-refused"]);
+  assert.deepEqual(SCENARIOS.slice(9).map((s) => s.id), ["claims-1-without", "claims-2-with", "claims-3-forged", "user-1-other", "user-2-right", "group-1-wrong", "group-2-right", "group-3-lookalike", "block-1-blocked", "block-2-other", "layered-1-scope", "layered-2-claim", "layered-3-agent", "layered-4-all"]);
   for (const s of SCENARIOS) assert.ok(CASES.some((c) => c.id === s.case), s.id);
 });
 
@@ -356,7 +359,9 @@ test("every call's trace passes assertTrace, is source mock with every decision 
       assert.ok(c.trace.decisions.every((d) => d.basis === "checked"));
       const cedar = c.trace.decisions[1];
       assert.equal(cedar.label, `AI policy (Cedar), action ${c.action}`);
-      assert.equal(cedar.outcome, c.verdict === "held" ? "info" : c.verdict === "refused" ? "fail" : "pass", `${s.id}/${c.tool}`);
+      // A refusal at sign-in (a forged token) never reaches the policy: that check is skipped, not failed.
+      const atSignIn = c.trace.decisions[0].outcome === "fail";
+      assert.equal(cedar.outcome, atSignIn ? "skipped" : c.verdict === "held" ? "info" : c.verdict === "refused" ? "fail" : "pass", `${s.id}/${c.tool}`);
     }
   }
 });
@@ -396,13 +401,13 @@ async function withApi(fn) {
   }
 }
 
-test("catalog serves the three cases, the seven scenarios in order, the guide, the IS / IS NOT panel and the static evidence", async () => {
+test("catalog serves the nine cases, every scenario in order, the guide, the IS / IS NOT panel and the static evidence", async () => {
   await withApi(async (j) => {
     const cat = await j("/api/catalog", null, "GET");
     assert.equal(cat.status, 200);
     assert.equal(cat.body.door, "door-example");
     assert.equal(cat.body.mockNote, MOCK_NOTE);
-    assert.deepEqual(cat.body.cases.map((c) => c.id), ["hold", "scope", "actsub", "stepup"]);
+    assert.deepEqual(cat.body.cases.map((c) => c.id), ["hold", "scope", "actsub", "stepup", "claims", "user", "group", "block", "layered"]);
     assert.deepEqual(cat.body.scenarios.map((s) => s.id), SCENARIOS.map((s) => s.id));
     assert.deepEqual(cat.body.scenarios.map((s) => s.callCount), SCENARIOS.map((s) => s.calls.length));
     assert.ok(cat.body.scenarios.every((s) => !("policies" in s) && !("calls" in s)), "the catalog does not ship the policy specs or call lists");
